@@ -2,6 +2,18 @@
 
 Browser pinball game in vanilla JavaScript with three.js and WebAudio (no build step).
 
+![Neon Drive theme, rotated view](docs/screenshots/rotated.jpg)
+
+## Screenshots
+
+| Red October | Hawaii Surfer | Neon Drive |
+|---|---|---|
+| ![Red October](docs/screenshots/red.jpg) | ![Hawaii Surfer](docs/screenshots/hawaii.jpg) | ![Neon Drive](docs/screenshots/synthwave.jpg) |
+
+| Cosmic Voyage | Pirate Cove |
+|---|---|
+| ![Cosmic Voyage](docs/screenshots/space.jpg) | ![Pirate Cove](docs/screenshots/pirate.jpg) |
+
 ## Features
 
 - 3D table with custom ball physics (flippers, bumpers, slingshots, posts, plunger, one-way gate)
