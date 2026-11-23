@@ -1,8 +1,8 @@
 // Service worker: precache the whole game for offline play, update in the background.
-const CACHE = 'pinball-v9';
+const CACHE = 'pinball-v10';
 const ASSETS = [
   './', 'index.html', 'pwa.js', 'manifest.webmanifest',
-  'main.js?v=9', 'sound.js?v=9', 'layout.js', 'art.js',
+  'main.js?v=10', 'sound.js?v=10', 'layout.js', 'art.js',
   'themes/index.js', 'themes/red.js', 'themes/hawaii.js', 'themes/synthwave.js', 'themes/space.js', 'themes/pirate.js',
   'lib/three.module.js', 'lib/RoomEnvironment.js',
   'lib/postprocessing/EffectComposer.js', 'lib/postprocessing/Pass.js', 'lib/postprocessing/RenderPass.js',

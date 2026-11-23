@@ -4,7 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { Sound } from './sound.js?v=9';
+import { Sound } from './sound.js?v=10';
 import { THEMES } from './themes/index.js';
 import {
   TABLE_X, Z_TOP, Z_BOT, BALL_R, GRAVITY, MAX_SPEED, LANE_X, LANE_FLOOR, DIVIDER_X,
@@ -461,7 +461,7 @@ function releaseStart() { if (game.charging) { game.charging = false; launch(); 
 function nudge(dx = (Math.random() - 0.5) * 2) {
   if (game.mode !== 'play' || !ball.active || game.tilted) return;
   if (!inLane()) { ball.vx += dx * 5 + (Math.random() - 0.5) * 2; ball.vz -= 3 + Math.random() * 3; }
-  game.shake = 0.9; Sound.nudge(); tiltFlash = 1;
+  game.shake = 0.3; Sound.nudge(); tiltFlash = 1; kickMachine(dx, 1.5);
   game.tiltMeter += 1;
   if (game.tiltMeter > 3.2) tiltOut();
   else if (game.tiltMeter > 2.1) { flashMsg('DANGER  DANGER', 1800); Sound.danger(); }
@@ -469,9 +469,26 @@ function nudge(dx = (Math.random() - 0.5) * 2) {
 function tiltOut() {
   game.tilted = true; game.charging = false; game.power = 0;
   setFlipper('left', false); setFlipper('right', false);
-  setMsg('TILT', 'DON\'T SHAKE THE MACHINE SO HARD!'); Sound.tilt(); game.shake = 1.4;
+  setMsg('TILT', 'DON\'T SHAKE THE MACHINE SO HARD!'); Sound.tilt(); game.shake = 0.8;
+  kickMachine(Math.random() < 0.5 ? -1 : 1, 2.6); rig.jitter = 0.7;
+  document.body.classList.remove('tiltshake'); void document.body.offsetWidth; document.body.classList.add('tiltshake');
 }
 let tiltFlash = 0;
+
+// Machine shake: damped spring that moves/rolls the whole scene (visual only, physics unaffected)
+const rig = { x: 0, z: 0, r: 0, vx: 0, vz: 0, vr: 0, jitter: 0 };
+function kickMachine(dx, strength = 1) {
+  const s = dx || (Math.random() < 0.5 ? -0.6 : 0.6);
+  rig.vx += s * 7 * strength; rig.vz -= 5 * strength; rig.vr -= s * 0.3 * strength;
+}
+function updateRig(dt) {
+  const k = 190, c = 8;
+  for (const [p, v] of [['x', 'vx'], ['z', 'vz'], ['r', 'vr']]) { rig[v] += (-k * rig[p] - c * rig[v]) * dt; rig[p] += rig[v] * dt; }
+  rig.jitter = Math.max(0, rig.jitter - dt);
+  const j = rig.jitter > 0 ? rig.jitter * 0.5 : 0;
+  scene.position.set(rig.x + (Math.random() - 0.5) * j, (Math.random() - 0.5) * j * 0.4, rig.z + (Math.random() - 0.5) * j);
+  scene.rotation.z = rig.r + (Math.random() - 0.5) * j * 0.03;
+}
 addEventListener('keydown', e => {
   if (e.repeat) return;
   const c = e.code;
@@ -742,7 +759,7 @@ function frame() {
     b.light.intensity = b.flash * 70;
   }
   colliders.forEach(c => { if (c.kind === 'sling' && c.mesh) { c.flash = Math.max(0, c.flash - dt * 5); c.mesh.material.emissiveIntensity = 1 + c.flash * 4; } });
-  updateLamps(dt, now); updateParticles(dt); updatePops(dt);
+  updateLamps(dt, now); updateParticles(dt); updatePops(dt); updateRig(dt);
 
   // camera: gentle follow + shake
   const follow = ball.active && game.mode === 'play';
@@ -766,5 +783,5 @@ function frame() {
   requestAnimationFrame(frame);
 }
 addEventListener('pointerdown', () => Sound.init(), { once: true });
-window.__game = { game, ball, flippers, viewT, burst, popup, lampShow, switchTheme };
+window.__game = { game, ball, flippers, viewT, rig, burst, popup, lampShow, switchTheme };
 frame();

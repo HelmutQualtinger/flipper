@@ -51,6 +51,9 @@
   #installBtn:hover { border-color:var(--accent); }
   #installHint { position:fixed; left:50%; bottom:110px; transform:translate(-50%,20px); max-width:86vw; padding:14px 18px; border:1px solid var(--accent); border-radius:14px; background:#050508f2; color:#fff; font:600 14px "Trebuchet MS",sans-serif; text-align:center; opacity:0; pointer-events:none; transition:all .25s; z-index:9; }
   #installHint.show { opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+  body.tiltshake canvas { animation:tiltShake .6s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes tiltShake { 10%,90% { transform:translate(-4px,1px) rotate(-.4deg); } 20%,80% { transform:translate(8px,-2px) rotate(.6deg); }
+    30%,50%,70% { transform:translate(-14px,3px) rotate(-1deg); } 40%,60% { transform:translate(14px,-3px) rotate(1deg); } }
   @keyframes tiltBlink { 50% { background:#ff2020; } }
   #fade { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .2s; z-index:8; }
   #power { position:fixed; right:18px; bottom:90px; width:14px; height:160px; border:2px solid var(--accent); border-radius:8px; overflow:hidden; background:#0008; box-shadow:0 0 10px var(--accent); }
@@ -78,7 +81,7 @@ addEventListener('unhandledrejection',function(ev){add('PROMISE: '+(ev.reason&&e
 <script type="importmap">
 { "imports": { "three": "./lib/three.module.js", "three/addons/": "./lib/" } }
 </script>
-<script type="module" src="main.js?v=9"></script>
+<script type="module" src="main.js?v=10"></script>
 <script src="pwa.js"></script>
 </body>
 </html>
