@@ -85,6 +85,52 @@ export const Sound = (() => {
               if (s % 6 === 0) osc(mtof(root - 12), next, step * 2, 'triangle', 0.22, music);
               if (s % 6 === 3) { osc(mtof(root + (song.minor && !song.minor[bar] ? 4 : 3)), next, step * 1.2, 'sawtooth', 0.04, music); osc(mtof(root + 7), next, step * 1.2, 'sawtooth', 0.04, music); noise(next, 0.08, 0.06, 7000, null, music, 1, 'highpass'); }
               break;
+            case 'spooky': // waltz-time organ + tolling bell
+              oscF(mtof(root + 12 + n), next, step * 1.4, 'sawtooth', 0.035, music, 1400, 0.02);
+              oscF(mtof(root + 24 + n) * 1.004, next, step * 1.2, 'square', 0.015, music, 2200, 0.02);
+              if (s === 0) { osc(mtof(root - 12), next, step * 10, 'triangle', 0.2, music); osc(mtof(root + 36), next, step * 8, 'sine', 0.05, music); }
+              if (s === 4 || s === 8) { osc(mtof(root + 3), next, step * 2, 'triangle', 0.05, music); osc(mtof(root + 7), next, step * 2, 'triangle', 0.05, music); }
+              break;
+            case 'electro':
+              osc(mtof(root + 12 + n), next, step * 0.6, 'square', 0.03, music);
+              oscF(mtof(root + 24 + n), next, step * 0.9, 'sawtooth', 0.025, music, 3200);
+              if (s % 2 === 0) oscF(mtof(root - 24), next, step * 1.6, 'sawtooth', 0.13, music, 420);
+              if (s % 4 === 0) osc(150, next, 0.22, 'sine', 0.5, music, 40);
+              if (s === 4 || s === 12) noise(next, 0.12, 0.2, 2400, 1200, music, 0.8);
+              if (s === 15) osc(2400, next, 0.1, 'square', 0.03, music, 180);
+              if (s % 2 === 1) noise(next, 0.02, 0.04, 10000, null, music, 1, 'highpass');
+              break;
+            case 'spooky':
+              if (s === 0) { for (const iv of [0, 3, 7, 12]) oscF(mtof(root + iv), next, step * 16, 'sawtooth', 0.02, music, 1100, step * 3);
+                osc(mtof(root - 12), next, step * 16, 'sine', 0.1, music); }
+              if (s % 2 === 0) {
+                osc(mtof(root + 24 + n), next, step * 2.5, 'sine', 0.06, music);
+                osc(mtof(root + 36 + n), next, step * 1.2, 'triangle', 0.015, music);
+                osc(mtof(root + 24 + n), next + step * 3, step * 2.5, 'sine', 0.022, music);
+              }
+              if (s === 0 || s === 2) osc(62, next, 0.16, 'sine', 0.32, music, 45);
+              if (s === 10 && bar === 3) noise(next, 0.8, 0.04, 300, 1200, music, 6);
+              break;
+            case 'afro': // marimba + djembe polyrhythm + shaker
+              if ([0, 2, 3, 5, 6, 8, 10, 11, 13, 14].includes(s)) {
+                osc(mtof(root + 12 + n), next, step * 1.4, 'sine', 0.09, music);
+                osc(mtof(root + 24 + n), next, step * 0.5, 'triangle', 0.025, music);
+              }
+              if (s === 0 || s === 6 || s === 10) osc(110, next, 0.25, 'sine', 0.45, music, 55);
+              if (s === 3 || s === 8 || s === 12 || s === 14) noise(next, 0.07, 0.18, 900, 600, music, 2);
+              noise(next, 0.03, s % 2 ? 0.025 : 0.045, 6000, null, music, 1, 'highpass');
+              if (s % 8 === 0) osc(mtof(root - 12), next, step * 6, 'triangle', 0.14, music);
+              break;
+            case 'jazz': { // swing: walking bass, piano comping, ride cymbal (12 steps = 4 triplet beats)
+              const beat = Math.floor(s / 3), walk = [0, 4, 7, 9][beat];
+              if (s % 3 === 0) osc(mtof(root - 24 + walk), next, step * 2.6, 'triangle', 0.22, music);
+              if (s === 3 || s === 9) for (const iv of [4, 10, 14]) osc(mtof(root + iv), next, step * 1.6, 'sine', 0.035, music);
+              if (s === 5 || s === 11) for (const iv of [4, 10, 14]) osc(mtof(root + iv), next, step * 0.6, 'sine', 0.02, music);
+              if (s % 3 === 0 || s % 6 === 5) noise(next, 0.14, s % 3 === 0 ? 0.05 : 0.03, 8000, null, music, 1, 'highpass');
+              if (s === 3 || s === 9) noise(next, 0.1, 0.05, 2500, 1500, music, 0.6, 'lowpass');
+              if (n) oscF(mtof(root + 12 + n), next, step * 2.2, 'sawtooth', 0.03, music, 1800, 0.02);
+              break;
+            }
             default: // chip
               osc(mtof(root + n), next, step * 0.8, 'square', 0.035, music);
               if (s % 4 === 0) osc(mtof(root - 24), next, step * 3, 'triangle', 0.16, music);

@@ -4,8 +4,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { Sound } from './sound.js?v=10';
-import { THEMES } from './themes/index.js';
+import { Sound } from './sound.js?v=12';
+import { THEMES } from './themes/index.js?v=12';
 import {
   TABLE_X, Z_TOP, Z_BOT, BALL_R, GRAVITY, MAX_SPEED, LANE_X, LANE_FLOOR, DIVIDER_X,
   FLIPPER_LEN, FLIPPER_R, FLIPPER_SPEED, TAU, BUMPERS, POSTS,
@@ -33,7 +33,7 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.5, 300);
-const camBase = new THREE.Vector3(), camLookBase = new THREE.Vector3(0, 1.5, -2.5), camLook = camLookBase.clone();
+const camBase = new THREE.Vector3(), camLookBase = new THREE.Vector3(0, 3.5, -5), camLook = camLookBase.clone();
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -46,7 +46,7 @@ function toggleBloom() { bloomOn = !bloomOn; localStorage.setItem('flipperBloom'
 function fitCamera() {
   camera.aspect = innerWidth / innerHeight;
   const s = Math.max(1, 0.72 / camera.aspect);
-  camBase.set(0, 41.5 * s, 33 * s);
+  camBase.set(0, 44 * s, 38 * s);
   camera.position.copy(camBase); camera.lookAt(camLook);
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
@@ -305,15 +305,33 @@ function scoreFX(c) {
 // ------------------------------------------------------------ backbox + dot-matrix display
 const backbox = new THREE.Group();
 backbox.position.set(0, -1, Z_TOP - 0.75); backbox.rotation.x = 0.1; scene.add(backbox);
-const glass = new THREE.Mesh(new THREE.PlaneGeometry(21.4, 10),
+const BB_LIFT = 0;   // optional speaker panel below the backglass
+const GLASS_H = 20;  // backglass height (theme art fills the lower half, the upper half is an extension)
+const glass = new THREE.Mesh(new THREE.PlaneGeometry(21.4, GLASS_H),
   new THREE.MeshStandardMaterial({ emissive: 0xffffff, emissiveIntensity: 0.8, roughness: 0.3 }));
-glass.position.set(0, 5, 0.01); backbox.add(glass);
-const bbBody = new THREE.Mesh(new THREE.BoxGeometry(21.4, 10, 1.6), matCabinet); bbBody.position.set(0, 5, -0.82); backbox.add(bbBody);
-const bbTop = new THREE.Mesh(new THREE.BoxGeometry(21.8, 0.4, 1.9), matTrim); bbTop.position.set(0, 10.1, -0.7); backbox.add(bbTop);
-for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.4, 10.4, 1.9), matTrim); p.position.set(s * 10.9, 5.1, -0.7); backbox.add(p); }
+glass.position.set(0, BB_LIFT + GLASS_H / 2, 0.01); backbox.add(glass);
+const bbBody = new THREE.Mesh(new THREE.BoxGeometry(21.4, GLASS_H + BB_LIFT, 1.6), matCabinet); bbBody.position.set(0, (GLASS_H + BB_LIFT) / 2, -0.82); backbox.add(bbBody);
+// speaker panel under the backglass: perforated grille with two speakers
+const speakerTex = (() => {
+  const c = document.createElement('canvas'); c.width = 1070; c.height = 200; const g = c.getContext('2d');
+  g.fillStyle = '#111114'; g.fillRect(0, 0, 1070, 200);
+  g.fillStyle = '#000'; for (let y = 8; y < 200; y += 12) for (let x = 8 + (y / 12 % 2) * 6; x < 1070; x += 12) { g.beginPath(); g.arc(x, y, 3.2, 0, TAU); g.fill(); }
+  for (const cx of [200, 870]) {
+    const gr = g.createRadialGradient(cx, 100, 10, cx, 100, 82); gr.addColorStop(0, '#2a2a30'); gr.addColorStop(0.5, '#0a0a0c'); gr.addColorStop(1, '#1c1c22');
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, 100, 82, 0, TAU); g.fill();
+    g.strokeStyle = '#3a3a44'; g.lineWidth = 3; for (const r of [82, 60, 36]) { g.beginPath(); g.arc(cx, 100, r, 0, TAU); g.stroke(); }
+    g.fillStyle = '#444'; g.beginPath(); g.arc(cx, 100, 16, 0, TAU); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+})();
+const speaker = new THREE.Mesh(new THREE.PlaneGeometry(21.4, Math.max(BB_LIFT, 0.01)), new THREE.MeshStandardMaterial({ map: speakerTex, metalness: 0.6, roughness: 0.5 }));
+speaker.position.set(0, BB_LIFT / 2, 0.01); speaker.visible = BB_LIFT > 0; backbox.add(speaker);
+const bbMid = new THREE.Mesh(new THREE.BoxGeometry(21.6, 0.25, 0.4), matTrim); bbMid.position.set(0, BB_LIFT + 10, 0.1); backbox.add(bbMid);
+const bbTop = new THREE.Mesh(new THREE.BoxGeometry(21.8, 0.4, 1.9), matTrim); bbTop.position.set(0, GLASS_H + 0.1 + BB_LIFT, -0.7); backbox.add(bbTop);
+for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.4, GLASS_H + 0.4 + BB_LIFT, 1.9), matTrim); p.position.set(s * 10.9, (GLASS_H + BB_LIFT) / 2 + 0.1, -0.7); backbox.add(p); }
 // light bar on top of the backbox
 const lightBar = new THREE.Mesh(new THREE.BoxGeometry(20.6, 0.18, 0.3), new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0xffffff, emissiveIntensity: 1.2 }));
-lightBar.position.set(0, 10.35, 0.2); backbox.add(lightBar);
+lightBar.position.set(0, GLASS_H + 0.35 + BB_LIFT, 0.2); backbox.add(lightBar);
 
 const dm = (() => {
   const W = 192, H = 48, P = 8;
@@ -327,7 +345,7 @@ const dm = (() => {
   const src = document.createElement('canvas'); src.width = W; src.height = H; const sg = src.getContext('2d', { willReadFrequently: true });
   const tex = new THREE.CanvasTexture(out); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(13.16, 3.4), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
-  mesh.position.set(0, 3.88, 0.05); backbox.add(mesh);
+  mesh.position.set(0, 3.88 + BB_LIFT + (GLASS_H - 10), 0.05); backbox.add(mesh);
   function put(txt, y, px, o = {}) {
     sg.font = `bold ${px}px "Courier New", Courier, monospace`;
     let w = sg.measureText(txt).width, x;
@@ -364,10 +382,93 @@ function canvasTex(c, wrap) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   if (wrap) t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
 }
+// Backglass is twice as tall as the theme art: upper half = original art (with the score display),
+// lower half = mirrored "reflection" of the art, sunburst, tagline plaque and two score medallions (+ 3D chase bulbs).
+function tallGlass(T) {
+  const art = T.glass(), W = art.width, H = art.height, mid = T.dm.mid, hi = T.dm.hi;
+  const c = document.createElement('canvas'); c.width = W; c.height = H * 2; const g = c.getContext('2d');
+  // reflection of the upper art
+  g.save(); g.translate(0, H * 2); g.scale(1, -1); g.filter = 'blur(5px) brightness(0.55) saturate(1.3)'; g.drawImage(art, 0, 0); g.restore(); g.filter = 'none';
+  const fade = g.createLinearGradient(0, H, 0, H * 2); fade.addColorStop(0, 'rgba(0,0,0,0.25)'); fade.addColorStop(0.6, 'rgba(0,0,0,0.7)'); fade.addColorStop(1, 'rgba(0,0,0,0.92)');
+  g.fillStyle = fade; g.fillRect(0, H, W, H);
+  const cx = W / 2, ty = H * 1.36;
+  // sunburst behind the plaque
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 36; i++) {
+    const a0 = i / 36 * TAU, a1 = a0 + TAU / 72;
+    g.fillStyle = i % 2 ? mid : hi; g.globalAlpha = 0.07;
+    g.beginPath(); g.moveTo(cx, ty); g.arc(cx, ty, W, a0, a1); g.closePath(); g.fill();
+  }
+  g.globalAlpha = 1; const glow = g.createRadialGradient(cx, ty, 0, cx, ty, 700); glow.addColorStop(0, mid); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  g.globalAlpha = 0.35; g.fillStyle = glow; g.fillRect(0, H, W, H); g.restore();
+  g.save(); g.beginPath(); g.rect(0, H, W, H); g.clip();
+  // twinkles
+  for (let i = 0; i < 120; i++) { g.globalAlpha = Math.random() * 0.8; g.fillStyle = Math.random() < 0.5 ? hi : '#fff'; const s = Math.random() < 0.1 ? 4 : 2; g.fillRect(Math.random() * W, H + Math.random() * H, s, s); }
+  g.globalAlpha = 1;
+  // tagline plaque
+  const pw = 1180, ph = 330, px = cx - pw / 2, py = ty - ph / 2 - 20, r = 40;
+  const rr = (x, y, w, h, rad) => { g.beginPath(); g.moveTo(x + rad, y); g.arcTo(x + w, y, x + w, y + h, rad); g.arcTo(x + w, y + h, x, y + h, rad); g.arcTo(x, y + h, x, y, rad); g.arcTo(x, y, x + w, y, rad); g.closePath(); };
+  const pg = g.createLinearGradient(0, py, 0, py + ph); pg.addColorStop(0, 'rgba(20,20,30,0.92)'); pg.addColorStop(1, 'rgba(0,0,0,0.95)');
+  rr(px, py, pw, ph, r); g.fillStyle = pg; g.fill();
+  g.shadowColor = mid; g.shadowBlur = 30; g.strokeStyle = mid; g.lineWidth = 10; g.stroke();
+  g.shadowBlur = 0; rr(px + 18, py + 18, pw - 36, ph - 36, r - 14); g.strokeStyle = hi; g.globalAlpha = 0.5; g.lineWidth = 3; g.stroke(); g.globalAlpha = 1;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  let fs = 170; g.font = `900 ${fs}px "Arial Black", Impact, sans-serif`;
+  const tw = g.measureText(T.t2).width; if (tw > pw - 120) { fs *= (pw - 120) / tw; g.font = `900 ${fs}px "Arial Black", Impact, sans-serif`; }
+  const tg = g.createLinearGradient(0, ty - fs / 2 - 20, 0, ty + fs / 2 - 20); tg.addColorStop(0, '#ffffff'); tg.addColorStop(0.55, hi); tg.addColorStop(1, mid);
+  g.lineJoin = 'round'; g.lineWidth = fs * 0.07; g.strokeStyle = '#000'; g.strokeText(T.t2, cx, ty - 30);
+  g.shadowColor = mid; g.shadowBlur = 26; g.fillStyle = tg; g.fillText(T.t2, cx, ty - 30); g.shadowBlur = 0;
+  g.font = '700 46px "Trebuchet MS", sans-serif'; g.fillStyle = hi; g.fillText('★  ' + T.name + '  ·  PINBALL  ★', cx, ty + fs * 0.55);
+  // medallions left/right
+  const medal = (x, y, big, small) => {
+    const R = 190;
+    const mg = g.createRadialGradient(x - 50, y - 60, 20, x, y, R); mg.addColorStop(0, '#2a2a36'); mg.addColorStop(1, '#050508');
+    g.fillStyle = mg; g.beginPath(); g.arc(x, y, R, 0, TAU); g.fill();
+    g.shadowColor = mid; g.shadowBlur = 24; g.strokeStyle = mid; g.lineWidth = 10; g.stroke(); g.shadowBlur = 0;
+    g.strokeStyle = hi; g.globalAlpha = 0.45; g.lineWidth = 3; g.setLineDash([14, 12]); g.beginPath(); g.arc(x, y, R - 26, 0, TAU); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    g.fillStyle = '#fff'; g.shadowColor = mid; g.shadowBlur = 18; g.font = '900 120px "Arial Black", Impact, sans-serif'; g.fillText(big, x, y - 14);
+    g.shadowBlur = 0; g.fillStyle = hi; g.font = '700 38px "Trebuchet MS", sans-serif'; g.fillText(small, x, y + 82);
+  };
+  medal(250, ty - 10, '100', 'BUMPER'); medal(W - 250, ty - 10, '1K', 'BONUS');
+  // bottom strip with instructions
+  g.fillStyle = 'rgba(0,0,0,0.7)'; g.fillRect(0, H * 1.78, W, 110);
+  g.fillStyle = mid; g.fillRect(0, H * 1.78, W, 5);
+  g.fillStyle = hi; g.font = '700 44px "Trebuchet MS", sans-serif';
+  g.fillText('PRESS START  ·  3 BALLS  ·  EVERY 10TH BUMPER = BONUS  ·  DON\'T TILT', cx, H * 1.78 + 58);
+  g.restore();
+  g.drawImage(art, 0, 0);
+  const sep = g.createLinearGradient(0, 0, W, 0); sep.addColorStop(0, 'rgba(0,0,0,0)'); sep.addColorStop(0.5, mid); sep.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = sep; g.fillRect(0, H - 6, W, 12);
+  return c;
+}
+// chase bulbs framing the lower half of the backglass
+const bulbs = (() => {
+  const pts = [], x0 = -10.1, x1 = 10.1, y0 = BB_LIFT + 0.45, y1 = BB_LIFT + 9.55, step = 0.95;
+  for (let x = x0; x <= x1 + 1e-6; x += (x1 - x0) / Math.round((x1 - x0) / step)) pts.push([x, y1]);
+  for (let y = y1 - step; y > y0 + 1e-6; y -= (y1 - y0) / Math.round((y1 - y0) / step)) pts.push([x1, y]);
+  for (let x = x1; x >= x0 - 1e-6; x -= (x1 - x0) / Math.round((x1 - x0) / step)) pts.push([x, y0]);
+  for (let y = y0 + step; y < y1 - 1e-6; y += (y1 - y0) / Math.round((y1 - y0) / step)) pts.push([x0, y]);
+  const inst = new THREE.InstancedMesh(new THREE.SphereGeometry(0.17, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }), pts.length);
+  const mtx = new THREE.Matrix4();
+  pts.forEach(([x, y], i) => { mtx.makeTranslation(x, y, 0.12); inst.setMatrixAt(i, mtx); inst.setColorAt(i, new THREE.Color(0, 0, 0)); });
+  backbox.add(inst);
+  return { inst, n: pts.length, color: new THREE.Color(0xffaa00), tmp: new THREE.Color() };
+})();
+function updateBulbs(now) {
+  const { inst, n, color, tmp } = bulbs, chase = Math.floor(now / 85);
+  for (let i = 0; i < n; i++) {
+    let lv;
+    if (game.tilted) lv = 0.05;
+    else if (lampShowT > 0) lv = (Math.floor(now / 70) % 2) ? 2.6 : 0.2;
+    else lv = ((i + chase) % 7 < 2) ? 2.4 : (i + chase) % 7 === 2 ? 1.0 : 0.25;
+    tmp.copy(color).multiplyScalar(lv); inst.setColorAt(i, tmp);
+  }
+  inst.instanceColor.needsUpdate = true;
+}
 function applyTheme(id) {
   const T = THEMES.find(t => t.id === id) || THEMES[0]; THEME = T;
   const tc = themeCache[T.id] || (themeCache[T.id] = {
-    table: canvasTex(T.table()), glass: canvasTex(T.glass()), wall: canvasTex(T.wall(), true), apron: canvasTex(apronCanvas(T)),
+    table: canvasTex(T.table()), glass: canvasTex(tallGlass(T)), wall: canvasTex(T.wall(), true), apron: canvasTex(apronCanvas(T)),
   });
   table.material.map = tc.table; table.material.needsUpdate = true;
   glass.material.map = glass.material.emissiveMap = tc.glass; glass.material.needsUpdate = true;
@@ -383,6 +484,7 @@ function applyTheme(id) {
   matCabinet.color.set(C.cabinet);
   bumperObjs.forEach(b => { b.body.material.color.set(C.dome); b.body.material.emissive.set(C.domeEmissive); b.cap.material.emissive.set(C.bulb); b.light.color.set(C.bumperLight); });
   lamps.forEach(l => l.mat.emissive.set(C.lamp));
+  bulbs.color.set(C.lamp);
   trail.forEach(m => m.material.color.set(C.trail));
   lightBar.material.emissive.set(C.lamp);
   [bloom.strength, bloom.radius, bloom.threshold] = C.bloom;
@@ -707,6 +809,7 @@ function displayContent(now) {
 let attractT = 0;
 function updateLamps(dt, now) {
   lampShowT = Math.max(0, lampShowT - dt);
+  updateBulbs(now);
   const chase = Math.floor(now / 90), progress = game.bumperHits % 10;
   for (const l of lamps) {
     let on;

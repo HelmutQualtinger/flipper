@@ -12,15 +12,19 @@ Browser pinball game in vanilla JavaScript with three.js and WebAudio (no build 
 |---|---|---|
 | ![Red October](docs/screenshots/red.jpg) | ![Hawaii Surfer](docs/screenshots/hawaii.jpg) | ![Neon Drive](docs/screenshots/synthwave.jpg) |
 
-| Cosmic Voyage | Pirate Cove |
-|---|---|
-| ![Cosmic Voyage](docs/screenshots/space.jpg) | ![Pirate Cove](docs/screenshots/pirate.jpg) |
+| Cosmic Voyage | Pirate Cove | Tesla |
+|---|---|---|
+| ![Cosmic Voyage](docs/screenshots/space.jpg) | ![Pirate Cove](docs/screenshots/pirate.jpg) | ![Tesla](docs/screenshots/tesla.jpg) |
+
+| Halloween | Safari | New York |
+|---|---|---|
+| ![Halloween](docs/screenshots/halloween.jpg) | ![Safari](docs/screenshots/africa.jpg) | ![New York](docs/screenshots/newyork.jpg) |
 
 ## Features
 
 - 3D table with custom ball physics (flippers, bumpers, slingshots, posts, plunger, one-way gate)
-- Backbox with dot-matrix score display
-- Five themes with their own artwork, colours and music: Red October, Hawaii Surfer, Neon Drive, Cosmic Voyage, Pirate Cove
+- Tall backbox with dot-matrix score display and chase lights
+- Nine themes with their own artwork, colours and music: Red October, Hawaii Surfer, Neon Drive, Cosmic Voyage, Pirate Cove, Tesla, Halloween, Safari, New York
 - Bloom glow, insert lamps, particles, score popups, ball trail
 - Free camera: drag to rotate, wheel or pinch to zoom
 - Synthesized sound effects and music

@@ -152,3 +152,23 @@ export function woodWall(base, grain, knots = 0) {
   for (let k = 0; k < knots; k++) { g.strokeStyle = grain.replace('A', 0.3); g.lineWidth = 2; g.beginPath(); g.ellipse(rnd(40, 470), rnd(30, 220), rnd(8, 16), rnd(4, 7), 0, 0, TAU); g.stroke(); }
   return c;
 }
+
+// Recursive lightning bolt with glow (midpoint displacement + random branches)
+export function lightning(g, x1, y1, x2, y2, { disp = 60, depth = 6, color = '#9fd8ff', width = 4, branch = 0.3 } = {}) {
+  const segs = [];
+  (function split(ax, ay, bx, by, d, lvl, w) {
+    if (lvl === 0) { segs.push([ax, ay, bx, by, w]); return; }
+    const mx = (ax + bx) / 2 + (Math.random() - 0.5) * d, my = (ay + by) / 2 + (Math.random() - 0.5) * d;
+    split(ax, ay, mx, my, d / 2, lvl - 1, w); split(mx, my, bx, by, d / 2, lvl - 1, w);
+    if (lvl > 2 && Math.random() < branch) {
+      const ang = Math.atan2(by - ay, bx - ax) + (Math.random() - 0.5) * 1.6, len = Math.hypot(bx - ax, by - ay) * 0.6;
+      split(mx, my, mx + Math.cos(ang) * len, my + Math.sin(ang) * len, d / 2, lvl - 2, w * 0.55);
+    }
+  })(x1, y1, x2, y2, disp, depth, width);
+  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const [lw, col, a, blur] of [[6, color, 0.25, 30], [2.2, color, 0.8, 14], [0.8, '#ffffff', 1, 4]]) {
+    g.globalAlpha = a; g.strokeStyle = col; g.shadowColor = color; g.shadowBlur = blur;
+    for (const [ax, ay, bx, by, w] of segs) { g.lineWidth = w * lw / 2.2; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); }
+  }
+  g.restore();
+}
