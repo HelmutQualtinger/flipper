@@ -10,6 +10,7 @@ import {
   TABLE_X, Z_TOP, Z_BOT, BALL_R, GRAVITY, MAX_SPEED, LANE_X, LANE_FLOOR, DIVIDER_X,
   FLIPPER_LEN, FLIPPER_R, FLIPPER_SPEED, TAU, BUMPERS, POSTS,
 } from './layout.js';
+import { buildRoom, buildStand } from './room.js?v=19';
 
 /* =====================================================================
    3D PINBALL – vanilla JS + three.js + WebAudio, multiple themes
@@ -130,6 +131,14 @@ for (const s of [-1, 1]) {
   rail.position.set(s * 10.45, 0.75, (Z_TOP + Z_BOT) / 2); rail.castShadow = true; scene.add(rail);
   const trim = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, Z_BOT - Z_TOP + 1.4), matTrim);
   trim.position.set(s * 10.45, 1.52, (Z_TOP + Z_BOT) / 2); scene.add(trim);
+}
+// lower cabinet, coin door, legs + the 70s bar around the machine
+scene.add(buildStand(matCabinet, matTrim, Z_TOP, Z_BOT));
+const room = new THREE.Group(); room.matrixAutoUpdate = false; scene.add(room);   // holds the current theme's bar
+const rooms = {}; let curRoom = null;
+function setRoom(id) {
+  const r = rooms[id] || (rooms[id] = buildRoom(id));
+  if (curRoom) room.remove(curRoom); room.add(r); curRoom = r;
 }
 // walls
 addSeg(-TABLE_X, -12, -TABLE_X, 10.5);
@@ -475,7 +484,7 @@ function applyTheme(id) {
   matWall.map = tc.wall; matWall.needsUpdate = true;
   apronMat.map = tc.apron; apronMat.needsUpdate = true;
   const C = T.colors;
-  scene.background.set(C.bg);
+  scene.background.set(C.bg); setRoom(T.id);
   hemi.color.set(C.hemi[0]); hemi.groundColor.set(C.hemi[1]); hemi.intensity = C.hemi[2];
   sun.color.set(C.sun[0]); sun.intensity = C.sun[1]; warm.color.set(C.warm[0]); warm.intensity = C.warm[1];
   matTrim.color.set(C.trim.color); matTrim.metalness = C.trim.metalness; matTrim.roughness = C.trim.roughness;
@@ -590,6 +599,7 @@ function updateRig(dt) {
   const j = rig.jitter > 0 ? rig.jitter * 0.5 : 0;
   scene.position.set(rig.x + (Math.random() - 0.5) * j, (Math.random() - 0.5) * j * 0.4, rig.z + (Math.random() - 0.5) * j);
   scene.rotation.z = rig.r + (Math.random() - 0.5) * j * 0.03;
+  scene.updateMatrix(); room.matrix.copy(scene.matrix).invert();   // the bar itself stays put
 }
 addEventListener('keydown', e => {
   if (e.repeat) return;
@@ -862,6 +872,7 @@ function frame() {
     b.light.intensity = b.flash * 70;
   }
   colliders.forEach(c => { if (c.kind === 'sling' && c.mesh) { c.flash = Math.max(0, c.flash - dt * 5); c.mesh.material.emissiveIntensity = 1 + c.flash * 4; } });
+  curRoom?.userData.update(now / 1000);
   updateLamps(dt, now); updateParticles(dt); updatePops(dt); updateRig(dt);
 
   // camera: gentle follow + shake
@@ -877,6 +888,7 @@ function frame() {
   camOff.setFromSpherical(sph);
   camera.position.copy(camLook).add(camOff).add({ x: (Math.random() - 0.5) * s, y: (Math.random() - 0.5) * s, z: (Math.random() - 0.5) * s });
   camera.lookAt(camLook);
+  if (window.__camShot) { camera.position.set(...window.__camShot[0]); camera.lookAt(...window.__camShot[1]); }   // screenshot hook
 
   game.shown += (game.score - game.shown) * Math.min(1, dt * 9);
   if (Math.abs(game.score - game.shown) < 1) game.shown = game.score;
