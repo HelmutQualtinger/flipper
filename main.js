@@ -4,8 +4,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { Sound } from './sound.js?v=12';
-import { THEMES } from './themes/index.js?v=12';
+import { Sound } from './sound.js?v=14';
+import { THEMES } from './themes/index.js?v=14';
 import {
   TABLE_X, Z_TOP, Z_BOT, BALL_R, GRAVITY, MAX_SPEED, LANE_X, LANE_FLOOR, DIVIDER_X,
   FLIPPER_LEN, FLIPPER_R, FLIPPER_SPEED, TAU, BUMPERS, POSTS,

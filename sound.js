@@ -131,6 +131,22 @@ export const Sound = (() => {
               if (n) oscF(mtof(root + 12 + n), next, step * 2.2, 'sawtooth', 0.03, music, 1800, 0.02);
               break;
             }
+            case 'boogie': { // 50s rock'n'roll shuffle: boogie bass, backbeat, handclaps, sax riff (12 steps = 4 swung beats)
+              const eighth = s % 3 === 0 || s % 3 === 2, idx = Math.floor(s / 3) * 2 + (s % 3 === 2 ? 1 : 0);
+              if (eighth) oscF(mtof(root - 24 + [0, 4, 7, 9, 10, 9, 7, 4][idx]), next, step * 1.6, 'sawtooth', 0.14, music, 700);
+              if (s === 0 || s === 6) osc(140, next, 0.2, 'sine', 0.5, music, 45);
+              if (s === 3 || s === 9) { noise(next, 0.14, 0.22, 2000, 900, music, 0.7); noise(next + 0.01, 0.05, 0.12, 1500, null, music, 3); }
+              if (s % 3 === 0) noise(next, 0.05, 0.04, 9000, null, music, 1, 'highpass');
+              if (n) { oscF(mtof(root + n), next, step * 2, 'sawtooth', 0.045, music, 1600, 0.01); oscF(mtof(root + n) * 1.005, next, step * 2, 'square', 0.02, music, 1200, 0.01); }
+              break;
+            }
+            case 'fanfare': // heroic brass calls over string pad and timpani
+              if (s === 0) { for (const iv of [0, 7, 12, 16]) oscF(mtof(root + iv), next, step * 16, 'sawtooth', 0.018, music, 1400, step * 4); }
+              if (s % 2 === 0 && (n || s === 0)) { oscF(mtof(root + 12 + n), next, step * 3.5, 'sawtooth', 0.06, music, 2200, 0.04); oscF(mtof(root + 24 + n), next, step * 3, 'square', 0.015, music, 2600, 0.05); }
+              if (s === 0 || s === 8) osc(mtof(root - 24), next, 0.6, 'sine', 0.35, music, mtof(root - 26));
+              if (s === 14 || s === 15) osc(mtof(root - 24), next, 0.12, 'sine', 0.2, music);
+              if (s % 4 === 2) noise(next, 0.05, 0.03, 7000, null, music, 1, 'highpass');
+              break;
             default: // chip
               osc(mtof(root + n), next, step * 0.8, 'square', 0.035, music);
               if (s % 4 === 0) osc(mtof(root - 24), next, step * 3, 'triangle', 0.16, music);

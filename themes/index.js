@@ -7,4 +7,6 @@ import tesla from './tesla.js';
 import halloween from './halloween.js';
 import africa from './africa.js';
 import newyork from './newyork.js';
-export const THEMES = [red, hawaii, synthwave, space, pirate, tesla, halloween, africa, newyork];
+import pinup from './pinup.js';
+import starpatrol from './starpatrol.js';
+export const THEMES = [red, hawaii, synthwave, space, pirate, tesla, halloween, africa, newyork, pinup, starpatrol];
