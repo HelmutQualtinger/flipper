@@ -2,6 +2,8 @@
 
 Browser pinball game in vanilla JavaScript with three.js and WebAudio (no build step).
 
+**▶ Play online: https://helmutqualtinger.github.io/flipper/**
+
 ![Neon Drive theme, rotated view](docs/screenshots/rotated.jpg)
 
 ## Screenshots
