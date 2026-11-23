@@ -44,6 +44,20 @@ composer.addPass(new OutputPass());
 let bloomOn = localStorage.getItem('flipperBloom') !== '0';
 function toggleBloom() { bloomOn = !bloomOn; localStorage.setItem('flipperBloom', bloomOn ? '1' : '0'); }
 
+// ------------------------------------------------------------ furniture toggle
+let furnitureOn = localStorage.getItem('flipperFurniture') !== '0';
+function applyFurniture() {
+  room.visible = furnitureOn;
+  stand.visible = furnitureOn;
+  const btn = $('furnitureBtn');
+  if (btn) btn.classList.toggle('off', !furnitureOn);
+}
+function toggleFurniture() {
+  furnitureOn = !furnitureOn;
+  localStorage.setItem('flipperFurniture', furnitureOn ? '1' : '0');
+  applyFurniture();
+}
+
 function fitCamera() {
   camera.aspect = innerWidth / innerHeight;
   const s = Math.max(1, 0.72 / camera.aspect);
@@ -133,7 +147,7 @@ for (const s of [-1, 1]) {
   trim.position.set(s * 10.45, 1.52, (Z_TOP + Z_BOT) / 2); scene.add(trim);
 }
 // lower cabinet, coin door, legs + the 70s bar around the machine
-scene.add(buildStand(matCabinet, matTrim, Z_TOP, Z_BOT));
+const stand = buildStand(matCabinet, matTrim, Z_TOP, Z_BOT); scene.add(stand);
 const room = new THREE.Group(); room.matrixAutoUpdate = false; scene.add(room);   // holds the current theme's bar
 const rooms = {}; let curRoom = null;
 function setRoom(id) {
@@ -526,6 +540,8 @@ function cycleTheme() { switchTheme(THEMES[(THEMES.indexOf(THEME) + 1) % THEMES.
   addEventListener('keydown', e => { if (e.code === 'Escape') { openMenu(false); closeHelp(); } });
   const q = new URLSearchParams(location.search).get('theme'), saved = localStorage.getItem('flipperTheme');
   applyTheme(THEMES.some(t => t.id === q) ? q : THEMES.some(t => t.id === saved) ? saved : THEMES[0].id);
+  applyFurniture();   // restore furniture visibility from localStorage
+  $('furnitureBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toggleFurniture(); });
 }
 
 // ------------------------------------------------------------ game state
@@ -621,6 +637,7 @@ addEventListener('keydown', e => {
   if (c === 'KeyN') nudge();
   if (c === 'KeyM') Sound.toggleMusic();
   if (c === 'KeyT') cycleTheme();
+  if (c === 'KeyF') toggleFurniture();
   if (c === 'KeyB') toggleBloom();
   if (c === 'KeyR') resetView();
   if (c === 'KeyH' || c === 'Slash') toggleHelp();
