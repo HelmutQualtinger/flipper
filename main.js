@@ -10,7 +10,7 @@ import {
   TABLE_X, Z_TOP, Z_BOT, BALL_R, GRAVITY, MAX_SPEED, LANE_X, LANE_FLOOR, DIVIDER_X,
   FLIPPER_LEN, FLIPPER_R, FLIPPER_SPEED, TAU, BUMPERS, POSTS,
 } from './layout.js';
-import { buildRoom, buildStand } from './room.js?v=19';
+import { buildRoom, buildStand } from './room.js?v=22';
 
 /* =====================================================================
    3D PINBALL – vanilla JS + three.js + WebAudio, multiple themes

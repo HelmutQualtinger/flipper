@@ -43,7 +43,7 @@ const ROOMS = {
   tesla: {
     wall: ['damask', { bg: '#163024', fg: '#b87a3a' }], lower: ['wood', { hue: 18, l: 0.3 }], floor: ['checker', { a: '#1a1410', b: '#cbb894' }],
     ceil: '#14100c', neon: [['Electric Saloon', '#7ac8ff'], ['VOLTS', '#ffb84a'], ['AC', '#7ac8ff']],
-    top: 0x3a2a1a, vinyl: 0x5a2a10, globe: 0xffc070, light: 0xffb070, decor: ['mirror', 'armchair:0x4a2210', 'lamp:0xffc070', 'coil'],
+    top: 0x3a2a1a, vinyl: 0x5a2a10, globe: 0xffc070, light: 0xffb070, decor: ['mirror', 'armchair:0x4a2210', 'coil'],
     lady: { skin: '#f0d0b8', hair: '#2a1a12', skirt: '#2a1a10', shoes: '#3a1a0a', style: 'bun', blouse: '#f2eee4', vest: '#4a2a16', lips: '#a8202a', acc: 'goggles' },
   },
   halloween: {
@@ -304,6 +304,9 @@ function starWindow() {
 export function buildRoom(id) {
   const C = ROOMS[id] || ROOMS.space;
   const room = new THREE.Group(), anim = [];
+  // exactly ONE decor light per room: the light count is part of every lit shader's key,
+  // so a room with a different count forces a recompile of all materials in the scene
+  let decorLight = null;
   const chrome = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 1, roughness: 0.18 });
   const brass = new THREE.MeshStandardMaterial({ color: 0xc8962e, metalness: 1, roughness: 0.3 });
   const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...o });
@@ -467,8 +470,10 @@ export function buildRoom(id) {
         const flame = add(new THREE.ConeGeometry(kind === 'torch' ? 1.1 : 0.5, kind === 'torch' ? 3.2 : 1.4, 10), std(0xffa020, { emissive: 0xff7a10, emissiveIntensity: 2.5 }), 0, by + (kind === 'torch' ? 2 : 2.4), 0, { parent: g });
         anim.push(t => { flame.scale.set(1, 0.85 + 0.25 * Math.abs(Math.sin(t * 9) * Math.sin(t * 13.7)), 1); });
       }
-      const pl = new THREE.PointLight(lightCol, 50, 28, 2); pl.position.set(0, 27, 2); g.add(pl);
-      anim.push(t => { pl.intensity = kind === 'lava' || kind === 'lamp' ? 45 : 35 + 18 * Math.sin(t * 11) * Math.sin(t * 7.3); });
+      if (!decorLight) {
+        const pl = decorLight = new THREE.PointLight(lightCol, 50, 28, 2); pl.position.set(0, 27, 2); g.add(pl);
+        anim.push(t => { pl.intensity = kind === 'lava' || kind === 'lamp' ? 45 : 35 + 18 * Math.sin(t * 11) * Math.sin(t * 7.3); });
+      }
     } else if (kind === 'plant' || kind === 'plant2') {
       const g = new THREE.Group(); g.position.set(kind === 'plant' ? -24 : -78, FLOOR, kind === 'plant' ? -19 : -14); room.add(g);
       add(new THREE.CylinderGeometry(3, 2.2, 6, 20), std(0x8a4a2a, { roughness: 0.5 }), 0, 3, 0, { parent: g });
@@ -507,6 +512,9 @@ export function buildRoom(id) {
       anim.push(t => { ball.rotation.y = t * 0.25; });
     }
   }
+
+  // rooms without a lit decor item still get a (dark) light so the count stays constant
+  if (!decorLight) { decorLight = new THREE.PointLight(0xffffff, 0, 28, 2); decorLight.position.set(-40, FLOOR + 27, -15); room.add(decorLight); }
 
   room.userData.update = t => anim.forEach(f => f(t));
   return room;
@@ -585,29 +593,24 @@ function buildBartender(L) {
 
   // ---- head
   const head = new THREE.Group(); head.position.set(0, 13.95, 0.25); chest.add(head);
-  const skull = lathe([[0.01, -3.25], [0.9, -3.15], [1.55, -2.75], [2.05, -2.0], [2.35, -1.1], [2.55, -0.1], [2.68, 0.9], [2.62, 1.8], [2.25, 2.65], [1.45, 3.2], [0.01, 3.4]], skin, head);
-  skull.scale.set(0.8, 0.96, 1);
-  const eyeW = phys(0xf2ece6, { roughness: 0.15, clearcoat: 1 }), iris = new THREE.MeshStandardMaterial({ color: L.eyes || '#4a2c16', roughness: 0.2 });
-  const lids = [];
+  // skull with a hand-painted face (planar projection from the front)
+  const skullGeo = new THREE.LatheGeometry([[0.01, -3.25], [0.9, -3.15], [1.55, -2.75], [2.05, -2.0], [2.35, -1.1], [2.55, -0.1], [2.68, 0.9], [2.62, 1.8], [2.25, 2.65], [1.45, 3.2], [0.01, 3.4]].map(([r, y]) => new THREE.Vector2(r, y)), 48);
+  { const pos = skullGeo.attributes.position, uv = skullGeo.attributes.uv;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), v = (y + 3.4) / 6.8;
+      uv.setXY(i, z > 0.2 ? 0.5 + x / 5.4 : (x > 0 ? 0.995 : 0.005), v);
+    } }
+  const faceOpen = faceTexture(L, skinC, false), faceShut = faceTexture(L, skinC, true);
+  const faceMat = phys(0xffffff, { map: faceOpen, roughness: 0.5, sheen: 0.25, sheenColor: 0xffb8a0, clearcoat: 0.08 });
+  const skull = mk(skullGeo, faceMat, 0, 0, 0, head); skull.scale.set(0.8, 0.96, 1);
   for (const s of [-1, 1]) {
-    const eg = new THREE.Group(); eg.position.set(s * 0.8, 0.55, 2.27); head.add(eg);
-    mk(new THREE.SphereGeometry(0.42, 18, 12), eyeW, 0, 0, 0, eg).scale.set(1, 0.64, 0.5);
-    mk(new THREE.SphereGeometry(0.23, 14, 10), iris, 0.02 * -s, -0.01, 0.16, eg).scale.set(1, 1, 0.45);
-    mk(new THREE.SphereGeometry(0.06, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }), 0.06, 0.07, 0.27, eg);
-    const lid = new THREE.Group(); eg.add(lid);
-    mk(new THREE.SphereGeometry(0.43, 18, 8, 0, TAU, 0, Math.PI * 0.5), skin, 0, 0, 0, lid).scale.set(1.02, 0.7, 0.62);
-    mk(new THREE.TorusGeometry(0.4, 0.045, 4, 16, Math.PI), new THREE.MeshBasicMaterial({ color: 0x140a08 }), 0, 0.02, 0.12, lid).scale.set(1.05, 0.62, 1);
-    lid.rotation.x = -0.35; lids.push(lid);
-    const brow = mk(new THREE.TorusGeometry(0.55, 0.055, 4, 14, Math.PI * 0.75), hair, s * 0.82, 1.1, 2.38, head);
-    brow.rotation.z = Math.PI * 0.12; brow.scale.set(1, 0.42, 1);
     mk(new THREE.SphereGeometry(0.42, 10, 8), skin, s * 2.08, 0.25, -0.2, head).scale.set(0.35, 1, 0.65);   // ears
     mk(new THREE.SphereGeometry(0.13, 8, 6), gold, s * 2.14, -0.4, -0.15, head);                          // earrings
   }
-  mk(new THREE.SphereGeometry(0.3, 12, 10), skin, 0, 0.05, 2.47, head).scale.set(0.72, 1.55, 0.72);     // nose bridge
-  mk(new THREE.SphereGeometry(0.28, 12, 10), skin, 0, -0.45, 2.62, head).scale.set(1.1, 0.8, 0.8);    // nose tip
-  const lipM = phys(L.lips, { roughness: 0.3, clearcoat: 0.6 });
-  mk(new THREE.SphereGeometry(0.5, 16, 10), lipM, 0, -1.22, 2.36, head).scale.set(1.05, 0.26, 0.45);
-  const lowLip = mk(new THREE.SphereGeometry(0.5, 16, 10), lipM, 0, -1.45, 2.3, head); lowLip.scale.set(0.95, 0.3, 0.48);
+  // a delicate nose and softly raised lips (the paint does the detail)
+  const noseM = phys(skinC.clone().multiplyScalar(0.9), { roughness: 0.7 });
+  mk(new THREE.SphereGeometry(0.2, 12, 10), noseM, 0, -0.4, 2.36, head).scale.set(1.0, 0.8, 0.55);
+
 
   // hair: crown + sides/back, then style
   const hp = (y0, y1, rr) => rr.map(([r, y]) => [r, y]).filter(([, y]) => y >= y0 && y <= y1);
@@ -733,11 +736,90 @@ function buildBartender(L) {
     for (const l of legs) { hipW.copy(l.H).applyMatrix4(pelvis.matrix); solveIK(hipW, l.A, THIGH, CALF, kneePole, l.th, l.ca); }
     // blink
     blinkT -= 1 / 60; const closed = blinkT < 0.13;
-    lids.forEach(l => { l.rotation.x = closed ? 0.55 : -0.35; });
+    const want = closed ? faceShut : faceOpen; if (faceMat.map !== want) { faceMat.map = want; }
     if (blinkT < 0) blinkT = R(2, 5.5);
-    lowLip.position.y = -1.45 - Math.max(0, Math.sin(t * 0.37)) * 0.04;
   };
   return root;
+}
+
+// ---------------------------------------------------------------- painted face (512² canvas; x ∈ [-2.7, 2.7], y ∈ [-3.4, 3.4] in skull space)
+function faceTexture(L, skinC, closed) {
+  const [c, g] = cv(512), S = 512;
+  const P = (x, y) => [(x / 5.4 + 0.5) * S, (1 - (y + 3.4) / 6.8) * S];
+  const skinHex = '#' + skinC.getHexString(), sk = new THREE.Color(skinHex);
+  const shade = (k, a = 1) => { const q = sk.clone().multiplyScalar(k); return `rgba(${q.r * 255 | 0},${q.g * 255 | 0},${q.b * 255 | 0},${a})`; };
+  g.fillStyle = skinHex; g.fillRect(0, 0, S, S);
+  // soft contouring: cheek hollows, temples, under the chin
+  const rad = (x, y, r, col0, col1 = 'rgba(0,0,0,0)') => { const [px, py] = P(x, y); const gr = g.createRadialGradient(px, py, 0, px, py, r); gr.addColorStop(0, col0); gr.addColorStop(1, col1); g.fillStyle = gr; g.fillRect(px - r, py - r, r * 2, r * 2); };
+  for (const s of [-1, 1]) {
+    rad(s * 1.95, -0.6, 70, shade(0.86, 0.35));
+    rad(s * 1.45, -0.35, 46, 'rgba(240,110,120,0.30)');          // blush
+    rad(s * 1.0, 0.95, 38, shade(0.9, 0.25));                     // eye socket depth
+  }
+  rad(0, -2.6, 70, shade(0.9, 0.25)); rad(0, 1.9, 90, 'rgba(255,255,255,0.08)');
+  const lip = new THREE.Color(L.lips), lipD = lip.clone().multiplyScalar(0.6), lipL = lip.clone().lerp(new THREE.Color(0xffffff), 0.35);
+  const css = col => '#' + col.getHexString();
+  const irisC = new THREE.Color(L.eyes || '#5a3a1e');
+  for (const s of [-1, 1]) {
+    const [ex, ey] = P(s * 1.0, 0.5), w = 46, h = 19;
+    // eyeshadow
+    const es = g.createRadialGradient(ex + s * 6, ey - 10, 4, ex + s * 6, ey - 8, 52);
+    es.addColorStop(0, css(lipD.clone().lerp(new THREE.Color(L.hair), 0.5)) + '88'); es.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = es; g.beginPath(); g.ellipse(ex + s * 6, ey - 8, 56, 30, 0, 0, Math.PI * 2); g.fill();
+    // almond outline (inner corner lower, outer corner lifted)
+    const inX = ex - s * w, outX = ex + s * w;
+    const almond = () => { g.beginPath(); g.moveTo(inX, ey + 3); g.bezierCurveTo(ex - s * w * 0.4, ey - h * 1.25, ex + s * w * 0.55, ey - h * 1.2, outX, ey - 5);
+      g.bezierCurveTo(ex + s * w * 0.5, ey + h * 0.9, ex - s * w * 0.4, ey + h * 0.85, inX, ey + 3); g.closePath(); };
+    if (!closed) {
+      g.save(); almond(); g.clip();
+      g.fillStyle = '#f6f1ec'; g.fillRect(ex - 60, ey - 40, 120, 80);
+      const ir = g.createRadialGradient(ex, ey - 2, 2, ex, ey - 2, 17);
+      ir.addColorStop(0, css(irisC.clone().lerp(new THREE.Color(0xffffff), 0.35))); ir.addColorStop(0.7, css(irisC)); ir.addColorStop(1, css(irisC.clone().multiplyScalar(0.4)));
+      g.fillStyle = ir; g.beginPath(); g.arc(ex, ey - 2, 17, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#0a0606'; g.beginPath(); g.arc(ex, ey - 2, 7, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(ex - 60, ey - 40, 120, 26);   // lid shadow
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(ex + 6, ey - 9, 4.5, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(ex - 5, ey + 5, 2, 0, Math.PI * 2); g.fill();
+      g.restore();
+      // upper liner with a small wing + lashes
+      g.strokeStyle = '#140a08'; g.lineCap = 'round'; g.lineWidth = 5.5;
+      g.beginPath(); g.moveTo(inX + s * 4, ey + 1); g.bezierCurveTo(ex - s * w * 0.4, ey - h * 1.25, ex + s * w * 0.55, ey - h * 1.2, outX, ey - 5); g.lineTo(outX + s * 12, ey - 13); g.stroke();
+      g.lineWidth = 2.6;
+      for (let i = 0; i < 7; i++) { const t = 0.3 + i * 0.11, lx = ex + s * (t - 0.5) * w * 2, ly = ey - h * (1.05 - Math.abs(t - 0.55) * 0.9);
+        g.beginPath(); g.moveTo(lx, ly); g.quadraticCurveTo(lx + s * 5, ly - 9, lx + s * 10, ly - 12); g.stroke(); }
+      g.strokeStyle = 'rgba(40,20,15,0.45)'; g.lineWidth = 1.6;
+      g.beginPath(); g.moveTo(inX + s * 10, ey + 7); g.bezierCurveTo(ex - s * w * 0.3, ey + h * 0.95, ex + s * w * 0.5, ey + h * 0.85, outX - s * 2, ey - 2); g.stroke();
+    } else {
+      g.strokeStyle = '#140a08'; g.lineCap = 'round'; g.lineWidth = 5;
+      g.beginPath(); g.moveTo(inX, ey + 2); g.quadraticCurveTo(ex, ey + 12, outX + s * 8, ey - 4); g.stroke();
+      g.lineWidth = 2.4; for (let i = 0; i < 6; i++) { const lx = ex + s * (-0.5 + i * 0.25) * w; g.beginPath(); g.moveTo(lx, ey + 8 - Math.abs(i - 2.5) * 1.5); g.lineTo(lx + s * 5, ey + 15); g.stroke(); }
+    }
+    // brows: slim and arched
+    const [bx, by] = P(s * 0.98, 1.2);
+    g.strokeStyle = css(new THREE.Color(L.hair).multiplyScalar(0.75)); g.lineWidth = 6; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(bx - s * 44, by + 10); g.quadraticCurveTo(bx + s * 8, by - 16, bx + s * 50, by + 6); g.stroke();
+    g.lineWidth = 3; g.beginPath(); g.moveTo(bx + s * 20, by - 3); g.lineTo(bx + s * 52, by + 8); g.stroke();
+  }
+  // nose: soft side shadows and nostrils
+  const [nx, ny] = P(0, -0.45);
+  g.fillStyle = shade(0.78, 0.5); for (const s of [-1, 1]) { g.beginPath(); g.ellipse(nx + s * 11, ny + 4, 5, 3.2, s * 0.4, 0, Math.PI * 2); g.fill(); }
+  g.strokeStyle = shade(0.86, 0.3); g.lineWidth = 4; g.beginPath(); g.moveTo(nx - 7, P(0, 0.1)[1]); g.quadraticCurveTo(nx - 11, ny - 14, nx - 13, ny - 2); g.stroke();
+  rad(0, -0.25, 22, 'rgba(255,255,255,0.12)');
+  // lips: cupid's bow, fuller lower lip with gloss, a gentle smile
+  const [mx, my] = P(0, -1.2), W = 48;
+  g.fillStyle = css(lip);
+  g.beginPath(); g.moveTo(mx - W, my); g.bezierCurveTo(mx - W * 0.6, my - 12, mx - W * 0.25, my - 19, mx, my - 11);
+  g.bezierCurveTo(mx + W * 0.25, my - 19, mx + W * 0.6, my - 12, mx + W, my);
+  g.bezierCurveTo(mx + W * 0.5, my + 3, mx - W * 0.5, my + 3, mx - W, my); g.fill();
+  g.fillStyle = css(lip.clone().multiplyScalar(1.05));
+  g.beginPath(); g.moveTo(mx - W * 0.92, my + 1); g.bezierCurveTo(mx - W * 0.6, my + 24, mx + W * 0.6, my + 24, mx + W * 0.92, my + 1);
+  g.bezierCurveTo(mx + W * 0.4, my + 4, mx - W * 0.4, my + 4, mx - W * 0.92, my + 1); g.fill();
+  g.strokeStyle = css(lipD); g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(mx - W - 3, my - 3); g.bezierCurveTo(mx - W * 0.5, my + 4, mx + W * 0.5, my + 4, mx + W + 3, my - 3); g.stroke();
+  g.fillStyle = css(lipL) + '66'; g.beginPath(); g.ellipse(mx + 4, my + 11, 15, 4.5, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.22)'; g.beginPath(); g.ellipse(mx + 8, my + 10, 6, 2, 0, 0, Math.PI * 2); g.fill();
+  for (const s of [-1, 1]) { g.fillStyle = shade(0.8, 0.45); g.beginPath(); g.arc(mx + s * (W + 4), my - 4, 3, 0, Math.PI * 2); g.fill(); }   // dimples at the corners
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
 
 // ---------------------------------------------------------------- machine stand: lower cabinet, coin door, legs (moves with the machine)
