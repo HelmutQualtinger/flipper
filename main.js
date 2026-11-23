@@ -4,7 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { Sound } from './sound.js?v=7';
+import { Sound } from './sound.js?v=9';
 import { THEMES } from './themes/index.js';
 import {
   TABLE_X, Z_TOP, Z_BOT, BALL_R, GRAVITY, MAX_SPEED, LANE_X, LANE_FLOOR, DIVIDER_X,
@@ -389,7 +389,8 @@ function applyTheme(id) {
   renderer.toneMappingExposure = C.exposure;
   dm.setPalette(T.dm); Sound.setSong(T.song);
   localStorage.setItem('flipperTheme', T.id);
-  document.querySelectorAll('#themes .chip').forEach(el => el.classList.toggle('on', el.dataset.id === T.id));
+  document.querySelectorAll('#themeMenu .item').forEach(el => el.classList.toggle('on', el.dataset.id === T.id));
+  $('themeName').textContent = T.name;
   document.documentElement.style.setProperty('--accent', T.dm.mid);
 }
 let switching = false;
@@ -401,12 +402,17 @@ function switchTheme(id) {
 }
 function cycleTheme() { switchTheme(THEMES[(THEMES.indexOf(THEME) + 1) % THEMES.length].id); }
 {
-  const box = $('themes');
+  const btn = $('themeBtn'), menu = $('themeMenu');
+  const openMenu = open => { menu.classList.toggle('open', open); btn.classList.toggle('open', open); };
   THEMES.forEach(T => {
-    const el = document.createElement('div'); el.className = 'chip'; el.dataset.id = T.id; el.textContent = T.name;
-    el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); switchTheme(T.id); });
-    box.appendChild(el);
+    const el = document.createElement('div'); el.className = 'item'; el.dataset.id = T.id;
+    el.innerHTML = `<span class="dot" style="background:${T.dm.mid};box-shadow:0 0 8px ${T.dm.mid}"></span>${T.name}`;
+    el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); openMenu(false); switchTheme(T.id); });
+    menu.appendChild(el);
   });
+  btn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); openMenu(!menu.classList.contains('open')); });
+  addEventListener('pointerdown', () => openMenu(false));
+  addEventListener('keydown', e => { if (e.code === 'Escape') openMenu(false); });
   const q = new URLSearchParams(location.search).get('theme'), saved = localStorage.getItem('flipperTheme');
   applyTheme(THEMES.some(t => t.id === q) ? q : THEMES.some(t => t.id === saved) ? saved : THEMES[0].id);
 }
@@ -414,7 +420,7 @@ function cycleTheme() { switchTheme(THEMES[(THEMES.indexOf(THEME) + 1) % THEMES.
 // ------------------------------------------------------------ game state
 const game = { mode: 'title', score: 0, shown: 0, balls: 3, hi: +(localStorage.getItem('flipperHi') || 0),
   charging: false, power: 0, chargeTick: 0, respawn: 0, shake: 0,
-  msgH: '', msgP: '', tmp: '', tmpUntil: 0, bumperHits: 0 };
+  msgH: '', msgP: '', tmp: '', tmpUntil: 0, bumperHits: 0, tiltMeter: 0, tilted: false };
 const ball = { x: LANE_X, z: LANE_FLOOR - 0.7, vx: 0, vz: 0, active: true, still: 0 };
 
 function setMsg(h, p) { game.msgH = h || ''; game.msgP = p || ''; }
@@ -424,7 +430,7 @@ function flashMsg(t, ms = 2500) { game.tmp = t; game.tmpUntil = performance.now(
 function spawnBall() { Object.assign(ball, { x: LANE_X, z: LANE_FLOOR - 0.7, vx: 0, vz: 0, active: true, still: 0 }); }
 function startGame() {
   game.mode = 'play'; game.score = 0; game.shown = 0; game.balls = 3; game.power = 0; game.charging = false; game.bumperHits = 0;
-  spawnBall(); Sound.start(); showHint();
+  game.tilted = false; game.tiltMeter = 0; spawnBall(); Sound.start(); showHint();
 }
 function showHint() { setMsg('', 'HOLD SPACE - RELEASE TO LAUNCH'); }
 function inLane() { return ball.x > DIVIDER_X + 0.1 && ball.z > 14; }
@@ -440,6 +446,7 @@ function launch() {
 const keys = {};
 function setFlipper(side, down) {
   const f = flippers[side];
+  if (down && game.tilted) return;
   if (down && !f.pressed) Sound.flipper();
   if (!down && f.pressed) Sound.flipperUp();
   f.pressed = down;
@@ -450,11 +457,21 @@ function pressStart() {
   else if (game.mode === 'play' && ball.active && inLane()) game.charging = true;
 }
 function releaseStart() { if (game.charging) { game.charging = false; launch(); game.power = 0; } }
-function nudge() {
-  if (game.mode !== 'play' || !ball.active || inLane()) return;
-  ball.vx += (Math.random() - 0.5) * 8; ball.vz -= 3 + Math.random() * 3;
-  game.shake = 0.8; Sound.nudge();
+// Nudge the table. dx: -1..1 sideways direction (shake direction on phones). Too much nudging = TILT.
+function nudge(dx = (Math.random() - 0.5) * 2) {
+  if (game.mode !== 'play' || !ball.active || game.tilted) return;
+  if (!inLane()) { ball.vx += dx * 5 + (Math.random() - 0.5) * 2; ball.vz -= 3 + Math.random() * 3; }
+  game.shake = 0.9; Sound.nudge(); tiltFlash = 1;
+  game.tiltMeter += 1;
+  if (game.tiltMeter > 3.2) tiltOut();
+  else if (game.tiltMeter > 2.1) { flashMsg('DANGER  DANGER', 1800); Sound.danger(); }
 }
+function tiltOut() {
+  game.tilted = true; game.charging = false; game.power = 0;
+  setFlipper('left', false); setFlipper('right', false);
+  setMsg('TILT', 'DON\'T SHAKE THE MACHINE SO HARD!'); Sound.tilt(); game.shake = 1.4;
+}
+let tiltFlash = 0;
 addEventListener('keydown', e => {
   if (e.repeat) return;
   const c = e.code;
@@ -483,11 +500,42 @@ const bind = (id, down, up) => {
 bind('bL', () => setFlipper('left', true), () => setFlipper('left', false));
 bind('bR', () => setFlipper('right', true), () => setFlipper('right', false));
 bind('bP', pressStart, releaseStart);
+$('bTilt').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sound.init(); nudge(); });
+
+// Phones: shaking the device nudges the table (iOS needs a permission prompt on a user gesture)
+const isTouch = matchMedia('(pointer: coarse)').matches;
+let lastShake = 0, gAvg = null, motionAsked = false;
+function enableMotion() {
+  if (motionAsked || !isTouch || !window.DeviceMotionEvent) return;
+  motionAsked = true;
+  if (typeof DeviceMotionEvent.requestPermission === 'function') DeviceMotionEvent.requestPermission().catch(() => {});
+}
+addEventListener('touchend', enableMotion);
+addEventListener('devicemotion', e => {
+  if (!isTouch) return;
+  let ax, ay, az;
+  const a = e.acceleration;
+  if (a && a.x != null) { ax = a.x; ay = a.y; az = a.z; }
+  else {                                            // high-pass filter on gravity-included data
+    const g = e.accelerationIncludingGravity; if (!g || g.x == null) return;
+    if (!gAvg) { gAvg = { x: g.x, y: g.y, z: g.z }; return; }
+    ax = g.x - gAvg.x; ay = g.y - gAvg.y; az = g.z - gAvg.z;
+    gAvg.x += ax * 0.1; gAvg.y += ay * 0.1; gAvg.z += az * 0.1;
+  }
+  const now = performance.now();
+  if (Math.hypot(ax, ay, az) > 13 && now - lastShake > 450) {
+    lastShake = now;
+    const ang = (screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0;
+    const sx = ang === 90 ? -ay : (ang === 270 || ang === -90) ? ay : ang === 180 ? -ax : ax;
+    nudge(Math.max(-1, Math.min(1, sx / 15)));
+  }
+});
 addEventListener('blur', () => { setFlipper('left', false); setFlipper('right', false); releaseStart(); });
 
 // ------------------------------------------------------------ Physik
 function hit(c, impact) {
   const now = performance.now();
+  if (game.tilted) { if (impact > 3) Sound.wall(impact); c.last = now; return; }
   if (c.kind === 'bumper') {
     Sound.bumper(); game.shake = Math.max(game.shake, 0.35);
     if (++game.bumperHits % 10 === 0) { addScore(1000); flashMsg(THEME.bonus); lampShow(1.5); popup(ball.x, ball.z - 1.5, '+1000', 1.6); }
@@ -539,7 +587,7 @@ function collide(c, surf) {
     // leichte Reibung entlang der Oberfläche
     const tx = -nz, tz = nx, vt = (ball.vx - sx) * tx + (ball.vz - sz) * tz;
     ball.vx -= vt * 0.01 * tx; ball.vz -= vt * 0.01 * tz;
-    if (c.kick) {
+    if (c.kick && !game.tilted) {
       const out = ball.vx * nx + ball.vz * nz;
       if (out < c.kick) { ball.vx += nx * (c.kick - out); ball.vz += nz * (c.kick - out); }
     }
@@ -577,6 +625,7 @@ function physicsStep(h) {
 
 function drain() {
   ball.active = false; game.balls--; Sound.drain(); game.shake = 0.5; lampShow(1.0);
+  game.tilted = false; game.tiltMeter = 0;
   if (game.balls > 0) {
     setMsg('BALL LOST', `${game.balls} ${game.balls === 1 ? 'BALL' : 'BALLS'} LEFT`);
     game.respawn = 1.6;
@@ -587,6 +636,8 @@ function drain() {
 }
 
 function update(dt) {
+  game.tiltMeter = Math.max(0, game.tiltMeter - dt * 0.6);
+  tiltFlash = Math.max(0, tiltFlash - dt * 3);
   if (game.charging) {
     game.power = Math.min(1, game.power + dt / 1.1);
     game.chargeTick -= dt;
@@ -623,7 +674,7 @@ function displayContent(now) {
   let l1, l2 = '', l2b = '', scroll = false;
   if (game.mode === 'title') {
     l1 = Math.floor(now / 2200) % 2 ? THEME.t2 : THEME.t1;
-    l2 = 'PRESS SPACE TO START  **  HI-SCORE ' + game.hi.toLocaleString('en-US') + '  **  LEFT/RIGHT = FLIPPERS  **  N = NUDGE  **  T = THEME  **  M = MUSIC  **  B = BLOOM  **  DRAG = ROTATE  **  WHEEL = ZOOM  **  R = RESET VIEW';
+    l2 = 'PRESS SPACE TO START  **  HI-SCORE ' + game.hi.toLocaleString('en-US') + '  **  LEFT/RIGHT = FLIPPERS  **  N / TILT BUTTON / SHAKE PHONE = NUDGE  **  T = THEME  **  M = MUSIC  **  B = BLOOM  **  DRAG = ROTATE  **  WHEEL = ZOOM  **  R = RESET VIEW';
     scroll = true;
   } else {
     l1 = game.msgH || shown;
@@ -642,14 +693,15 @@ function updateLamps(dt, now) {
   const chase = Math.floor(now / 90), progress = game.bumperHits % 10;
   for (const l of lamps) {
     let on;
-    if (lampShowT > 0) on = (Math.floor(now / 70) + l.idx) % 2 === 0;
+    if (game.tilted) on = false;
+    else if (lampShowT > 0) on = (Math.floor(now / 70) + l.idx) % 2 === 0;
     else if (game.mode !== 'play') on = l.group === 'arch' ? (chase + l.idx) % 5 === 0 : Math.abs(((chase >> 1) % 8) - 4) === l.idx;
     else if (l.group === 'arch') on = l.idx < progress || (l.idx === progress && Math.floor(now / 250) % 2 === 0);
     else on = l.idx === (Math.floor(now / 160) % 5);
     l.level += ((on ? 1 : 0) - l.level) * Math.min(1, dt * 18);
     l.mat.emissiveIntensity = 0.08 + l.level * 2.6;
   }
-  lightBar.material.emissiveIntensity = 0.6 + 0.6 * Math.sin(now / 300) ** 2 + (lampShowT > 0 ? 1.5 : 0);
+  lightBar.material.emissiveIntensity = game.tilted ? 0.05 : 0.6 + 0.6 * Math.sin(now / 300) ** 2 + (lampShowT > 0 ? 1.5 : 0);
   if (game.mode !== 'play') {
     attractT -= dt;
     if (attractT <= 0) { attractT = 0.7; bumperObjs[Math.floor(Math.random() * bumperObjs.length)].flash = 0.6; }
@@ -659,7 +711,7 @@ function updateLamps(dt, now) {
 // ------------------------------------------------------------ render loop
 const clock = new THREE.Clock();
 const axis = new THREE.Vector3(), dq = new THREE.Quaternion();
-const powerEl = $('power').firstElementChild;
+const powerEl = $('power').firstElementChild, tiltBtn = $('bTilt');
 let lastDisp = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 1 / 30), now = performance.now();
@@ -679,6 +731,8 @@ function frame() {
   for (const k of ['left', 'right']) flippers[k].mesh.rotation.y = -flippers[k].th;
   plunger.position.z = LANE_FLOOR + 0.3 + game.power * 1.6;
   powerEl.style.height = (game.power * 100) + '%';
+  tiltBtn.style.setProperty('--heat', Math.min(1, game.tiltMeter / 3.2).toFixed(2));
+  tiltBtn.classList.toggle('tilted', game.tilted);
 
   for (const b of bumperObjs) {
     b.flash = Math.max(0, b.flash - dt * 4);

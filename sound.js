@@ -130,6 +130,10 @@ export const Sound = (() => {
       [523, 659, 784, 1047].forEach((f, k) => osc(f, t + k * 0.09, 0.25, 'square', 0.14, sfx)); },
     over() { if (!ctx) return; const t = ctx.currentTime;
       [523, 466, 392, 330, 262].forEach((f, k) => osc(f, t + k * 0.22, 0.4, 'triangle', 0.25, sfx)); },
+    danger() { if (!ctx) return; const t = ctx.currentTime;
+      [0, 0.16].forEach(d => osc(880, t + d, 0.12, 'square', 0.12, sfx)); },
+    tilt() { if (!ctx) return; const t = ctx.currentTime;
+      osc(70, t, 1.2, 'sawtooth', 0.3, sfx, 40); osc(74, t, 1.2, 'square', 0.15, sfx, 42); noise(t, 0.5, 0.3, 300, 80, sfx, 1, 'lowpass'); },
     nudge() { if (!ctx) return; const t = ctx.currentTime;
       noise(t, 0.15, 0.4, 200, 80, sfx, 1, 'lowpass'); },
   };

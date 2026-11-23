@@ -24,6 +24,8 @@ Browser pinball game in vanilla JavaScript with three.js and WebAudio (no build 
 - Bloom glow, insert lamps, particles, score popups, ball trail
 - Free camera: drag to rotate, wheel or pinch to zoom
 - Synthesized sound effects and music
+- Theme popup menu, TILT button with real tilt penalty, shake-to-nudge on phones
+- Installable web app (PWA) with offline support; social media preview card
 
 ## Run
 

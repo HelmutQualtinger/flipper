@@ -2,16 +2,56 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="3D pinball in the browser: five themes, dot-matrix score display, bloom lighting, synthesized music. Installable as an app, works offline.">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pinball">
+<!-- social media preview -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="3D Pinball">
+<meta property="og:title" content="3D Pinball – Theme Edition">
+<meta property="og:description" content="3D pinball in the browser: five themes, dot-matrix score display, bloom lighting, synthesized music. Installable as an app, works offline.">
+<meta property="og:url" content="https://helmutqualtinger.github.io/flipper/">
+<meta property="og:image" content="https://helmutqualtinger.github.io/flipper/docs/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="3D pinball table in the Neon Drive theme">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="3D Pinball – Theme Edition">
+<meta name="twitter:description" content="3D pinball in the browser: five themes, dot-matrix score display, bloom lighting, synthesized music. Installable as an app, works offline.">
+<meta name="twitter:image" content="https://helmutqualtinger.github.io/flipper/docs/og.jpg">
 <title>3D Pinball – Theme Edition</title>
 <style>
   :root { --accent: #ff8a18; }
   html, body { margin:0; height:100%; overflow:hidden; background:#000; font-family: "Trebuchet MS", system-ui, sans-serif; color:#eef; user-select:none; -webkit-user-select:none; touch-action:none; }
   canvas { display:block; }
-  #themes { position:fixed; left:12px; top:12px; display:flex; flex-direction:column; gap:6px; z-index:5; }
-  #themes .chip { padding:7px 14px; border:1px solid #fff3; border-radius:18px; background:#000a; color:#ccd; font:700 11px "Trebuchet MS",sans-serif; letter-spacing:1.5px; cursor:pointer; backdrop-filter: blur(6px); transition: all .2s; }
-  #themes .chip:hover { color:#fff; border-color:#fff8; }
-  #themes .chip.on { color:#fff; border-color:var(--accent); box-shadow:0 0 12px var(--accent), inset 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent); }
+  #themeBox { position:fixed; left:12px; top:12px; z-index:6; }
+  #themeBtn { padding:9px 16px; border:1px solid var(--accent); border-radius:20px; background:#000b; color:#fff; font:700 12px "Trebuchet MS",sans-serif; letter-spacing:1.5px; cursor:pointer; backdrop-filter:blur(6px); box-shadow:0 0 10px color-mix(in srgb, var(--accent) 60%, transparent); }
+  #themeBtn .lbl { opacity:.55; } #themeBtn .caret { display:inline-block; transition:transform .2s; }
+  #themeBtn.open .caret { transform:rotate(180deg); }
+  #themeMenu { position:absolute; left:0; top:100%; z-index:2; margin-top:8px; min-width:210px; padding:6px; border:1px solid #fff3; border-radius:14px; background:#050508ee; backdrop-filter:blur(10px); box-shadow:0 12px 40px #000c; opacity:0; transform:translateY(-6px) scale(.98); pointer-events:none; transition:all .16s; }
+  #themeMenu.open { opacity:1; transform:none; pointer-events:auto; }
+  #themeMenu .item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:9px; color:#ccd; font:700 12px "Trebuchet MS",sans-serif; letter-spacing:1.5px; cursor:pointer; }
+  #themeMenu .item:hover { background:#ffffff14; color:#fff; }
+  #themeMenu .item.on { color:#fff; background:#ffffff1f; }
+  #themeMenu .dot { width:10px; height:10px; border-radius:50%; flex:none; }
+  #bTilt { --heat:0; position:fixed; right:12px; top:12px; z-index:6; width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font:900 14px "Arial Black",Impact,sans-serif; letter-spacing:1px; color:#fff; cursor:pointer;
+    border:2px solid color-mix(in srgb, #ff2020 calc(var(--heat) * 100%), var(--accent)); background:radial-gradient(circle, color-mix(in srgb, #ff2020 calc(var(--heat) * 70%), #111) 0%, #000c 75%);
+    box-shadow:0 0 calc(8px + var(--heat) * 24px) color-mix(in srgb, #ff2020 calc(var(--heat) * 100%), var(--accent)); transition:transform .08s; }
+  #bTilt:active { transform:scale(.92) rotate(-6deg); }
+  #bTilt.tilted { animation:tiltBlink .35s steps(2) infinite; }
+  #installBtn { display:none; margin-top:8px; padding:8px 14px; border:1px solid #fff4; border-radius:18px; background:#000b; color:#fff; font:700 11px "Trebuchet MS",sans-serif; letter-spacing:1.5px; cursor:pointer; width:max-content; }
+  #installBtn:hover { border-color:var(--accent); }
+  #installHint { position:fixed; left:50%; bottom:110px; transform:translate(-50%,20px); max-width:86vw; padding:14px 18px; border:1px solid var(--accent); border-radius:14px; background:#050508f2; color:#fff; font:600 14px "Trebuchet MS",sans-serif; text-align:center; opacity:0; pointer-events:none; transition:all .25s; z-index:9; }
+  #installHint.show { opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+  @keyframes tiltBlink { 50% { background:#ff2020; } }
   #fade { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .2s; z-index:8; }
   #power { position:fixed; right:18px; bottom:90px; width:14px; height:160px; border:2px solid var(--accent); border-radius:8px; overflow:hidden; background:#0008; box-shadow:0 0 10px var(--accent); }
   #power i { position:absolute; bottom:0; left:0; right:0; height:0; background:linear-gradient(#fff, var(--accent)); }
@@ -28,14 +68,17 @@
 addEventListener('error',function(ev){add('ERROR: '+ev.message+' ('+(ev.filename||'')+':'+ev.lineno+')');});
 addEventListener('unhandledrejection',function(ev){add('PROMISE: '+(ev.reason&&ev.reason.stack||ev.reason));});})();
 </script>
-<div id="themes"></div>
+<div id="themeBox"><div id="themeBtn"><span class="lbl">THEME</span> <span id="themeName"></span> <span class="caret">▾</span></div><div id="themeMenu"></div><div id="installBtn">⬇ INSTALL APP</div></div>
+<div id="installHint">To install: tap the <b>Share</b> button (square with arrow) and choose <b>“Add to Home Screen”</b>.</div>
+<div id="bTilt" title="Nudge the table (N). Too much = TILT!">TILT</div>
 <div id="fade"></div>
 <div id="power"><i></i></div>
-<div id="help">← / Z / Shift = left flipper &nbsp;·&nbsp; → / . / Shift = right flipper &nbsp;·&nbsp; hold SPACE &amp; release = launch &nbsp;·&nbsp; N = nudge &nbsp;·&nbsp; T = theme &nbsp;·&nbsp; M = music &nbsp;·&nbsp; B = bloom &nbsp;·&nbsp; drag = rotate &nbsp;·&nbsp; wheel = zoom &nbsp;·&nbsp; R = reset view</div>
+<div id="help">← / → flippers &nbsp;·&nbsp; hold SPACE = launch &nbsp;·&nbsp; N / TILT = nudge &nbsp;·&nbsp; T theme &nbsp;·&nbsp; M music &nbsp;·&nbsp; B bloom &nbsp;·&nbsp; drag = rotate &nbsp;·&nbsp; wheel = zoom &nbsp;·&nbsp; R reset view</div>
 <div class="btn" id="bL">◀</div><div class="btn" id="bP">START / LAUNCH</div><div class="btn" id="bR">▶</div>
 <script type="importmap">
 { "imports": { "three": "./lib/three.module.js", "three/addons/": "./lib/" } }
 </script>
-<script type="module" src="main.js?v=7"></script>
+<script type="module" src="main.js?v=9"></script>
+<script src="pwa.js"></script>
 </body>
 </html>

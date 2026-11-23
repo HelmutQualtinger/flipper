@@ -1,0 +1,22 @@
+{
+  "name": "3D Pinball – Theme Edition",
+  "short_name": "Pinball",
+  "description": "3D pinball with five themes, dot-matrix display and synthesized sound.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "docs/screenshots/synthwave.jpg", "sizes": "1200x900", "type": "image/jpeg", "form_factor": "wide", "label": "Neon Drive" },
+    { "src": "docs/screenshots/pirate.jpg", "sizes": "1200x900", "type": "image/jpeg", "form_factor": "wide", "label": "Pirate Cove" }
+  ]
+}
