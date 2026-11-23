@@ -60,7 +60,7 @@
   #power i { position:absolute; bottom:0; left:0; right:0; height:0; background:linear-gradient(#fff, var(--accent)); }
   #help { position:fixed; left:0; right:0; bottom:8px; text-align:center; font-size:12px; opacity:.55; letter-spacing:1px; pointer-events:none; }
   /* ── help button ── */
-  #helpBtn { position:fixed; right:88px; top:12px; z-index:6; width:44px; height:44px; border-radius:50%; border:2px solid var(--accent); background:#000b; color:#fff; font:900 20px "Trebuchet MS",sans-serif; display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(6px); box-shadow:0 0 10px color-mix(in srgb, var(--accent) 50%, transparent); transition:transform .1s, background .15s; }
+  #helpBtn { position:fixed; right:88px; top:12px; z-index:6; width:44px; height:44px; border-radius:50%; border:2px solid var(--accent); background:#000b; color:var(--accent); display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(6px); box-shadow:0 0 10px color-mix(in srgb, var(--accent) 50%, transparent); transition:transform .1s, background .15s; }
   #helpBtn:hover { background:#ff8a1833; }
   #helpBtn:active { transform:scale(.9); }
   /* ── help overlay ── */
@@ -92,7 +92,13 @@ addEventListener('unhandledrejection',function(ev){add('PROMISE: '+(ev.reason&&e
 <div id="themeBox"><div id="themeBtn"><span class="lbl">THEME</span> <span id="themeName"></span> <span class="caret">▾</span></div><div id="themeMenu"></div><div id="installBtn">⬇ INSTALL APP</div></div>
 <div id="installHint">To install: tap the <b>Share</b> button (square with arrow) and choose <b>“Add to Home Screen”</b>.</div>
 <div id="bTilt" title="Nudge the table (N). Too much = TILT!">TILT</div>
-<div id="helpBtn" title="Help (H)">?</div>
+<div id="helpBtn" title="Help (H)">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <circle cx="12" cy="17" r="0.5" fill="currentColor" stroke="none"/>
+  </svg>
+</div>
 <div id="helpOverlay">
   <div id="helpPanel">
     <div id="helpClose" title="Close (Esc)">✕</div>
