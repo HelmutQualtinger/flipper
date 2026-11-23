@@ -523,7 +523,7 @@ function cycleTheme() { switchTheme(THEMES[(THEMES.indexOf(THEME) + 1) % THEMES.
   });
   btn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); openMenu(!menu.classList.contains('open')); });
   addEventListener('pointerdown', () => openMenu(false));
-  addEventListener('keydown', e => { if (e.code === 'Escape') openMenu(false); });
+  addEventListener('keydown', e => { if (e.code === 'Escape') { openMenu(false); closeHelp(); } });
   const q = new URLSearchParams(location.search).get('theme'), saved = localStorage.getItem('flipperTheme');
   applyTheme(THEMES.some(t => t.id === q) ? q : THEMES.some(t => t.id === saved) ? saved : THEMES[0].id);
 }
@@ -601,6 +601,15 @@ function updateRig(dt) {
   scene.rotation.z = rig.r + (Math.random() - 0.5) * j * 0.03;
   scene.updateMatrix(); room.matrix.copy(scene.matrix).invert();   // the bar itself stays put
 }
+// ------------------------------------------------------------ help overlay
+const helpOverlay = $('helpOverlay');
+function openHelp()  { helpOverlay.classList.add('open'); }
+function closeHelp() { helpOverlay.classList.remove('open'); }
+function toggleHelp(){ helpOverlay.classList.toggle('open'); }
+$('helpBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toggleHelp(); });
+$('helpClose').addEventListener('pointerdown', e => { e.preventDefault(); closeHelp(); });
+helpOverlay.addEventListener('pointerdown', e => { if (e.target === helpOverlay) closeHelp(); });
+
 addEventListener('keydown', e => {
   if (e.repeat) return;
   const c = e.code;
@@ -614,6 +623,8 @@ addEventListener('keydown', e => {
   if (c === 'KeyT') cycleTheme();
   if (c === 'KeyB') toggleBloom();
   if (c === 'KeyR') resetView();
+  if (c === 'KeyH' || c === 'Slash') toggleHelp();
+  if (c === 'Escape') closeHelp();
 });
 addEventListener('keyup', e => {
   const c = e.code;
