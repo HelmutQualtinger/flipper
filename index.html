@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>3D Pinball – Theme Edition</title>
+<style>
+  :root { --accent: #ff8a18; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#000; font-family: "Trebuchet MS", system-ui, sans-serif; color:#eef; user-select:none; -webkit-user-select:none; touch-action:none; }
+  canvas { display:block; }
+  #themes { position:fixed; left:12px; top:12px; display:flex; flex-direction:column; gap:6px; z-index:5; }
+  #themes .chip { padding:7px 14px; border:1px solid #fff3; border-radius:18px; background:#000a; color:#ccd; font:700 11px "Trebuchet MS",sans-serif; letter-spacing:1.5px; cursor:pointer; backdrop-filter: blur(6px); transition: all .2s; }
+  #themes .chip:hover { color:#fff; border-color:#fff8; }
+  #themes .chip.on { color:#fff; border-color:var(--accent); box-shadow:0 0 12px var(--accent), inset 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent); }
+  #fade { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .2s; z-index:8; }
+  #power { position:fixed; right:18px; bottom:90px; width:14px; height:160px; border:2px solid var(--accent); border-radius:8px; overflow:hidden; background:#0008; box-shadow:0 0 10px var(--accent); }
+  #power i { position:absolute; bottom:0; left:0; right:0; height:0; background:linear-gradient(#fff, var(--accent)); }
+  #help { position:fixed; left:0; right:0; bottom:8px; text-align:center; font-size:12px; opacity:.55; letter-spacing:1px; pointer-events:none; }
+  .btn { position:fixed; bottom:34px; width:28vw; max-width:170px; height:64px; border-radius:32px; border:2px solid var(--accent); background:#000b; color:#fff; font-size:22px; display:none; align-items:center; justify-content:center; }
+  #bL { left:14px; } #bR { right:14px; } #bP { left:50%; transform:translateX(-50%); width:30vw; font-size:16px; }
+  @media (pointer:coarse) { .btn { display:flex; } #help { display:none; } }
+</style>
+</head>
+<body>
+<pre id="err" style="position:fixed;left:8px;bottom:30px;right:8px;margin:0;color:#ff8080;font:12px monospace;white-space:pre-wrap;z-index:9;pointer-events:none"></pre>
+<script>
+(function(){var e=document.getElementById('err');function add(m){e.textContent+=m+'\n';}
+addEventListener('error',function(ev){add('ERROR: '+ev.message+' ('+(ev.filename||'')+':'+ev.lineno+')');});
+addEventListener('unhandledrejection',function(ev){add('PROMISE: '+(ev.reason&&ev.reason.stack||ev.reason));});})();
+</script>
+<div id="themes"></div>
+<div id="fade"></div>
+<div id="power"><i></i></div>
+<div id="help">← / Z / Shift = left flipper &nbsp;·&nbsp; → / . / Shift = right flipper &nbsp;·&nbsp; hold SPACE &amp; release = launch &nbsp;·&nbsp; N = nudge &nbsp;·&nbsp; T = theme &nbsp;·&nbsp; M = music &nbsp;·&nbsp; B = bloom &nbsp;·&nbsp; drag = rotate &nbsp;·&nbsp; wheel = zoom &nbsp;·&nbsp; R = reset view</div>
+<div class="btn" id="bL">◀</div><div class="btn" id="bP">START / LAUNCH</div><div class="btn" id="bR">▶</div>
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.js", "three/addons/": "./lib/" } }
+</script>
+<script type="module" src="main.js?v=7"></script>
+</body>
+</html>
