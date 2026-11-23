@@ -742,84 +742,275 @@ function buildBartender(L) {
   return root;
 }
 
-// ---------------------------------------------------------------- painted face (512² canvas; x ∈ [-2.7, 2.7], y ∈ [-3.4, 3.4] in skull space)
+// ---------------------------------------------------------------- painted face (1024² canvas; x ∈ [-2.7, 2.7], y ∈ [-3.4, 3.4] in skull space)
 function faceTexture(L, skinC, closed) {
-  const [c, g] = cv(512), S = 512;
+  const [c, g] = cv(1024), S = 1024;
   const P = (x, y) => [(x / 5.4 + 0.5) * S, (1 - (y + 3.4) / 6.8) * S];
   const skinHex = '#' + skinC.getHexString(), sk = new THREE.Color(skinHex);
   const shade = (k, a = 1) => { const q = sk.clone().multiplyScalar(k); return `rgba(${q.r * 255 | 0},${q.g * 255 | 0},${q.b * 255 | 0},${a})`; };
-  g.fillStyle = skinHex; g.fillRect(0, 0, S, S);
-  // soft contouring: cheek hollows, temples, under the chin
-  const rad = (x, y, r, col0, col1 = 'rgba(0,0,0,0)') => { const [px, py] = P(x, y); const gr = g.createRadialGradient(px, py, 0, px, py, r); gr.addColorStop(0, col0); gr.addColorStop(1, col1); g.fillStyle = gr; g.fillRect(px - r, py - r, r * 2, r * 2); };
-  for (const s of [-1, 1]) {
-    rad(s * 1.95, -0.6, 70, shade(0.86, 0.35));
-    rad(s * 1.45, -0.35, 46, 'rgba(240,110,120,0.30)');          // blush
-    rad(s * 1.0, 0.95, 38, shade(0.9, 0.25));                     // eye socket depth
-  }
-  rad(0, -2.6, 70, shade(0.9, 0.25)); rad(0, 1.9, 90, 'rgba(255,255,255,0.08)');
-  const lip = new THREE.Color(L.lips), lipD = lip.clone().multiplyScalar(0.6), lipL = lip.clone().lerp(new THREE.Color(0xffffff), 0.35);
   const css = col => '#' + col.getHexString();
-  const irisC = new THREE.Color(L.eyes || '#5a3a1e');
+  const rad = (x, y, r, col0, col1 = 'rgba(0,0,0,0)') => {
+    const [px, py] = P(x, y); const gr = g.createRadialGradient(px, py, 0, px, py, r);
+    gr.addColorStop(0, col0); gr.addColorStop(1, col1); g.fillStyle = gr; g.fillRect(px - r, py - r, r * 2, r * 2);
+  };
+
+  // ── base skin fill ──────────────────────────────────────────────
+  g.fillStyle = skinHex; g.fillRect(0, 0, S, S);
+
+  // subtle skin gradient: lighter forehead, warmer mid-face, slightly cooler jaw
+  const faceGrad = g.createLinearGradient(0, 0, 0, S);
+  faceGrad.addColorStop(0,   shade(1.08, 0.45));
+  faceGrad.addColorStop(0.4, shade(1.00, 0));
+  faceGrad.addColorStop(0.75,shade(0.97, 0.18));
+  faceGrad.addColorStop(1,   shade(0.93, 0.32));
+  g.fillStyle = faceGrad; g.fillRect(0, 0, S, S);
+
+  // ── broad contouring ────────────────────────────────────────────
   for (const s of [-1, 1]) {
-    const [ex, ey] = P(s * 1.0, 0.5), w = 46, h = 19;
-    // eyeshadow
-    const es = g.createRadialGradient(ex + s * 6, ey - 10, 4, ex + s * 6, ey - 8, 52);
-    es.addColorStop(0, css(lipD.clone().lerp(new THREE.Color(L.hair), 0.5)) + '88'); es.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = es; g.beginPath(); g.ellipse(ex + s * 6, ey - 8, 56, 30, 0, 0, Math.PI * 2); g.fill();
-    // almond outline (inner corner lower, outer corner lifted)
-    const inX = ex - s * w, outX = ex + s * w;
-    const almond = () => { g.beginPath(); g.moveTo(inX, ey + 3); g.bezierCurveTo(ex - s * w * 0.4, ey - h * 1.25, ex + s * w * 0.55, ey - h * 1.2, outX, ey - 5);
-      g.bezierCurveTo(ex + s * w * 0.5, ey + h * 0.9, ex - s * w * 0.4, ey + h * 0.85, inX, ey + 3); g.closePath(); };
-    if (!closed) {
-      g.save(); almond(); g.clip();
-      g.fillStyle = '#f6f1ec'; g.fillRect(ex - 60, ey - 40, 120, 80);
-      const ir = g.createRadialGradient(ex, ey - 2, 2, ex, ey - 2, 17);
-      ir.addColorStop(0, css(irisC.clone().lerp(new THREE.Color(0xffffff), 0.35))); ir.addColorStop(0.7, css(irisC)); ir.addColorStop(1, css(irisC.clone().multiplyScalar(0.4)));
-      g.fillStyle = ir; g.beginPath(); g.arc(ex, ey - 2, 17, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#0a0606'; g.beginPath(); g.arc(ex, ey - 2, 7, 0, Math.PI * 2); g.fill();
-      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(ex - 60, ey - 40, 120, 26);   // lid shadow
-      g.fillStyle = '#fff'; g.beginPath(); g.arc(ex + 6, ey - 9, 4.5, 0, Math.PI * 2); g.fill();
-      g.beginPath(); g.arc(ex - 5, ey + 5, 2, 0, Math.PI * 2); g.fill();
-      g.restore();
-      // upper liner with a small wing + lashes
-      g.strokeStyle = '#140a08'; g.lineCap = 'round'; g.lineWidth = 5.5;
-      g.beginPath(); g.moveTo(inX + s * 4, ey + 1); g.bezierCurveTo(ex - s * w * 0.4, ey - h * 1.25, ex + s * w * 0.55, ey - h * 1.2, outX, ey - 5); g.lineTo(outX + s * 12, ey - 13); g.stroke();
-      g.lineWidth = 2.6;
-      for (let i = 0; i < 7; i++) { const t = 0.3 + i * 0.11, lx = ex + s * (t - 0.5) * w * 2, ly = ey - h * (1.05 - Math.abs(t - 0.55) * 0.9);
-        g.beginPath(); g.moveTo(lx, ly); g.quadraticCurveTo(lx + s * 5, ly - 9, lx + s * 10, ly - 12); g.stroke(); }
-      g.strokeStyle = 'rgba(40,20,15,0.45)'; g.lineWidth = 1.6;
-      g.beginPath(); g.moveTo(inX + s * 10, ey + 7); g.bezierCurveTo(ex - s * w * 0.3, ey + h * 0.95, ex + s * w * 0.5, ey + h * 0.85, outX - s * 2, ey - 2); g.stroke();
-    } else {
-      g.strokeStyle = '#140a08'; g.lineCap = 'round'; g.lineWidth = 5;
-      g.beginPath(); g.moveTo(inX, ey + 2); g.quadraticCurveTo(ex, ey + 12, outX + s * 8, ey - 4); g.stroke();
-      g.lineWidth = 2.4; for (let i = 0; i < 6; i++) { const lx = ex + s * (-0.5 + i * 0.25) * w; g.beginPath(); g.moveTo(lx, ey + 8 - Math.abs(i - 2.5) * 1.5); g.lineTo(lx + s * 5, ey + 15); g.stroke(); }
-    }
-    // brows: slim and arched
-    const [bx, by] = P(s * 0.98, 1.2);
-    g.strokeStyle = css(new THREE.Color(L.hair).multiplyScalar(0.75)); g.lineWidth = 6; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(bx - s * 44, by + 10); g.quadraticCurveTo(bx + s * 8, by - 16, bx + s * 50, by + 6); g.stroke();
-    g.lineWidth = 3; g.beginPath(); g.moveTo(bx + s * 20, by - 3); g.lineTo(bx + s * 52, by + 8); g.stroke();
+    rad(s * 1.95, -0.6,  140, shade(0.84, 0.30));          // temples/cheek hollow
+    rad(s * 1.50, -0.30,  90, 'rgba(230,100,110,0.28)');   // blush
+    rad(s * 1.60, -0.55,  60, 'rgba(230,100,110,0.14)');   // blush extension
+    rad(s * 1.00,  0.90,  76, shade(0.88, 0.22));           // eye socket depth
+    rad(s * 2.10,  0.55,  55, shade(0.86, 0.18));           // outer orbit shadow
   }
-  // nose: soft side shadows and nostrils
+  rad(0, -2.60, 130, shade(0.88, 0.22));                    // chin/jaw underside
+  rad(0,  1.90, 160, 'rgba(255,255,255,0.09)');             // forehead highlight
+  rad(0,  1.20,  55, 'rgba(255,255,255,0.11)');             // brow bone highlight
+  rad(0, -0.10,  50, 'rgba(255,255,255,0.08)');             // nose bridge highlight
+
+  // ── subtle pore/micro-texture noise ────────────────────────────
+  const imgD = g.getImageData(0, 0, S, S), d = imgD.data;
+  for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - 0.5) * 6; d[i] += n; d[i+1] += n; d[i+2] += n; }
+  g.putImageData(imgD, 0, 0);
+
+  // ── iris / eye colour helpers ───────────────────────────────────
+  const lip  = new THREE.Color(L.lips);
+  const lipD = lip.clone().multiplyScalar(0.6);
+  const lipL = lip.clone().lerp(new THREE.Color(0xffffff), 0.35);
+  const irisC = new THREE.Color(L.eyes || '#5a3a1e');
+  const irisLight = irisC.clone().lerp(new THREE.Color(0xffffff), 0.42);
+  const irisDark  = irisC.clone().multiplyScalar(0.35);
+  const hairC = new THREE.Color(L.hair);
+
+  // ── EYES ────────────────────────────────────────────────────────
+  for (const s of [-1, 1]) {
+    const [ex, ey] = P(s * 1.0, 0.52), w = 92, h = 38;
+
+    // eyeshadow (deeper, more graduated)
+    const shadowCol = css(lipD.clone().lerp(hairC, 0.55));
+    const es = g.createRadialGradient(ex + s * 10, ey - 18, 6, ex + s * 10, ey - 14, 102);
+    es.addColorStop(0, shadowCol + 'aa'); es.addColorStop(0.55, shadowCol + '44'); es.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = es; g.beginPath(); g.ellipse(ex + s * 10, ey - 14, 110, 58, 0, 0, Math.PI * 2); g.fill();
+
+    // crease shadow above lid
+    const crease = g.createRadialGradient(ex, ey - 28, 4, ex, ey - 20, 68);
+    crease.addColorStop(0, 'rgba(30,10,5,0.28)'); crease.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = crease; g.beginPath(); g.ellipse(ex, ey - 20, 110, 48, 0, 0, Math.PI * 2); g.fill();
+
+    // almond eye shape (inner corner lower, outer corner lifted)
+    const inX = ex - s * w, outX = ex + s * w;
+    const almond = () => {
+      g.beginPath();
+      g.moveTo(inX, ey + 6);
+      g.bezierCurveTo(ex - s * w * 0.38, ey - h * 1.30, ex + s * w * 0.52, ey - h * 1.25, outX, ey - 10);
+      g.bezierCurveTo(ex + s * w * 0.52, ey + h * 0.95, ex - s * w * 0.38, ey + h * 0.90, inX, ey + 6);
+      g.closePath();
+    };
+
+    if (!closed) {
+      // ---- open eye ----
+      g.save(); almond(); g.clip();
+
+      // sclera (off-white with subtle vein tint)
+      const scleraGr = g.createRadialGradient(ex, ey, 0, ex, ey, w);
+      scleraGr.addColorStop(0, '#f8f4f0'); scleraGr.addColorStop(1, '#e8e0d8');
+      g.fillStyle = scleraGr; g.fillRect(ex - w - 10, ey - h - 10, (w + 10) * 2, (h + 10) * 2);
+
+      // iris (multi-layer radial with petal fibres)
+      const ir = g.createRadialGradient(ex, ey - 3, 3, ex, ey - 3, 34);
+      ir.addColorStop(0,   css(irisLight));
+      ir.addColorStop(0.35, css(irisC));
+      ir.addColorStop(0.75, css(irisDark));
+      ir.addColorStop(1,   css(irisDark.clone().multiplyScalar(0.5)));
+      g.fillStyle = ir; g.beginPath(); g.arc(ex, ey - 3, 34, 0, Math.PI * 2); g.fill();
+
+      // iris fibre strokes (radial lines for texture)
+      g.save(); g.beginPath(); g.arc(ex, ey - 3, 34, 0, Math.PI * 2); g.clip();
+      g.strokeStyle = css(irisLight.clone().lerp(new THREE.Color(0xffffff), 0.2)) + '55';
+      g.lineWidth = 1.4;
+      for (let i = 0; i < 20; i++) {
+        const a = (i / 20) * Math.PI * 2;
+        g.beginPath(); g.moveTo(ex + Math.cos(a) * 6, ey - 3 + Math.sin(a) * 6);
+        g.lineTo(ex + Math.cos(a) * 33, ey - 3 + Math.sin(a) * 33); g.stroke();
+      }
+      g.restore();
+
+      // limbal ring
+      g.strokeStyle = css(irisDark.clone().multiplyScalar(0.5)); g.lineWidth = 3.5;
+      g.beginPath(); g.arc(ex, ey - 3, 33, 0, Math.PI * 2); g.stroke();
+
+      // pupil
+      g.fillStyle = '#080404'; g.beginPath(); g.arc(ex, ey - 3, 15, 0, Math.PI * 2); g.fill();
+
+      // pupil micro-highlights
+      g.fillStyle = 'rgba(255,255,255,0.90)';
+      g.beginPath(); g.ellipse(ex + 10, ey - 14, 7, 5, -0.4, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.45)';
+      g.beginPath(); g.arc(ex - 7, ey + 4, 3.5, 0, Math.PI * 2); g.fill();
+
+      // lid shadow (upper)
+      g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(ex - w - 10, ey - h - 10, (w + 10) * 2, 46);
+      // inner-corner pink highlight
+      g.fillStyle = 'rgba(220,130,130,0.55)';
+      g.beginPath(); g.ellipse(inX + s * 10, ey + 2, 11, 7, s * 0.3, 0, Math.PI * 2); g.fill();
+
+      g.restore();
+
+      // upper lid liner with cat-eye flick
+      g.strokeStyle = '#120808'; g.lineCap = 'round'; g.lineWidth = 10;
+      g.beginPath(); g.moveTo(inX + s * 8, ey + 2);
+      g.bezierCurveTo(ex - s * w * 0.38, ey - h * 1.30, ex + s * w * 0.52, ey - h * 1.25, outX, ey - 10);
+      g.lineTo(outX + s * 22, ey - 24); g.stroke();
+
+      // lower lash line (subtle)
+      g.strokeStyle = 'rgba(30,10,5,0.50)'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(inX + s * 18, ey + 12);
+      g.bezierCurveTo(ex - s * w * 0.28, ey + h * 1.0, ex + s * w * 0.50, ey + h * 0.90, outX - s * 4, ey - 2); g.stroke();
+
+      // upper lashes (individual)
+      g.strokeStyle = '#120808'; g.lineCap = 'round'; g.lineWidth = 4.5;
+      for (let i = 0; i < 11; i++) {
+        const t = 0.22 + i * 0.065;
+        const lx = ex + s * (t - 0.5) * w * 2.0;
+        const ly = ey - h * (1.08 - Math.abs(t - 0.5) * 0.85);
+        const curl = s * (5 + Math.abs(t - 0.5) * 10);
+        g.beginPath(); g.moveTo(lx, ly);
+        g.quadraticCurveTo(lx + curl, ly - 16, lx + curl * 1.8, ly - 24); g.stroke();
+      }
+      // lower lashes (lighter/shorter)
+      g.lineWidth = 2.5; g.strokeStyle = 'rgba(18,8,8,0.60)';
+      for (let i = 0; i < 7; i++) {
+        const lx = ex + s * (-0.4 + i * 0.14) * w;
+        const ly = ey + h * 0.80;
+        g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + s * 2, ly + 10); g.stroke();
+      }
+
+    } else {
+      // ---- closed eye (sleeping/blinking) ----
+      g.strokeStyle = '#120808'; g.lineCap = 'round'; g.lineWidth = 9;
+      g.beginPath(); g.moveTo(inX, ey + 4); g.quadraticCurveTo(ex, ey + 22, outX + s * 14, ey - 8); g.stroke();
+      // lashes on closed lid
+      g.lineWidth = 4; g.strokeStyle = '#120808';
+      for (let i = 0; i < 8; i++) {
+        const lx = ex + s * (-0.5 + i * 0.16) * w;
+        const ly = ey + 14 - Math.abs(i - 3.5) * 1.8;
+        g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + s * 4, ly + 16); g.stroke();
+      }
+      // subtle lid fold
+      g.strokeStyle = shade(0.82, 0.30); g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(inX + s * 12, ey - 10); g.quadraticCurveTo(ex, ey - 20, outX - s * 8, ey - 12); g.stroke();
+    }
+
+    // ── EYEBROWS (thicker, tapered, with individual hair strokes) ──
+    const [bx, by] = P(s * 0.95, 1.22);
+    const browC = css(hairC.clone().multiplyScalar(0.72));
+    const browTip = css(hairC.clone().multiplyScalar(0.55));
+    // main brow body
+    g.save();
+    g.beginPath(); g.moveTo(bx - s * 88, by + 20);
+    g.bezierCurveTo(bx - s * 20, by - 32, bx + s * 20, by - 36, bx + s * 100, by + 10);
+    g.bezierCurveTo(bx + s * 90, by + 24, bx - s * 10, by + 20, bx - s * 88, by + 20);
+    g.closePath();
+    const browGr = g.createLinearGradient(bx - s * 88, 0, bx + s * 100, 0);
+    browGr.addColorStop(0,   browC + 'cc');
+    browGr.addColorStop(0.45, browC + 'ff');
+    browGr.addColorStop(1,   browTip + '88');
+    g.fillStyle = browGr; g.fill();
+    // hair strokes over the brow
+    g.strokeStyle = browTip; g.lineWidth = 1.6; g.lineCap = 'round';
+    for (let i = 0; i < 14; i++) {
+      const t = i / 13, px2 = bx - s * 88 + s * (t * 188);
+      const py2 = by + 20 - t * (by + 20 - (by - 36)) * Math.sin(Math.PI * t);
+      g.beginPath(); g.moveTo(px2, py2 - 6 + Math.random() * 12); g.lineTo(px2 + s * 7, py2 - 14 + Math.random() * 8); g.stroke();
+    }
+    g.restore();
+  }
+
+  // ── NOSE (more sculpted with bridge highlight + alar shading) ───
   const [nx, ny] = P(0, -0.45);
-  g.fillStyle = shade(0.78, 0.5); for (const s of [-1, 1]) { g.beginPath(); g.ellipse(nx + s * 11, ny + 4, 5, 3.2, s * 0.4, 0, Math.PI * 2); g.fill(); }
-  g.strokeStyle = shade(0.86, 0.3); g.lineWidth = 4; g.beginPath(); g.moveTo(nx - 7, P(0, 0.1)[1]); g.quadraticCurveTo(nx - 11, ny - 14, nx - 13, ny - 2); g.stroke();
-  rad(0, -0.25, 22, 'rgba(255,255,255,0.12)');
-  // lips: cupid's bow, fuller lower lip with gloss, a gentle smile
-  const [mx, my] = P(0, -1.2), W = 48;
+  // alar (wing) shadows
+  g.fillStyle = shade(0.76, 0.48);
+  for (const s of [-1, 1]) { g.beginPath(); g.ellipse(nx + s * 22, ny + 8, 11, 7, s * 0.5, 0, Math.PI * 2); g.fill(); }
+  // nostrils
+  g.fillStyle = shade(0.60, 0.70);
+  for (const s of [-1, 1]) { g.beginPath(); g.ellipse(nx + s * 18, ny + 14, 7, 5, s * 0.35, 0, Math.PI * 2); g.fill(); }
+  // nose bridge side shadows
+  g.strokeStyle = shade(0.84, 0.28); g.lineWidth = 7; g.lineCap = 'round';
+  for (const s of [-1, 1]) {
+    g.beginPath(); g.moveTo(nx + s * 14, P(0, 0.2)[1]); g.quadraticCurveTo(nx + s * 20, ny - 24, nx + s * 22, ny + 2); g.stroke();
+  }
+  // nose tip shadow + highlight
+  rad(0, -0.65, 32, shade(0.88, 0.30));
+  rad(0, -0.35, 18, 'rgba(255,255,255,0.18)');
+  // subtle philtrum lines
+  g.strokeStyle = shade(0.82, 0.22); g.lineWidth = 3;
+  for (const s of [-1, 1]) {
+    g.beginPath(); g.moveTo(nx + s * 7, ny + 20); g.lineTo(nx + s * 9, P(0, -1.0)[1]); g.stroke();
+  }
+
+  // ── LIPS (fuller, more detailed with philtrum dip, liner, gloss) ─
+  const [mx, my] = P(0, -1.22), W = 96;
+  // upper lip shadow (philtrum)
+  g.fillStyle = shade(0.82, 0.30);
+  g.beginPath(); g.ellipse(mx, my - 2, 10, 14, 0, 0, Math.PI * 2); g.fill();
+
+  // upper lip (cupid's bow)
   g.fillStyle = css(lip);
-  g.beginPath(); g.moveTo(mx - W, my); g.bezierCurveTo(mx - W * 0.6, my - 12, mx - W * 0.25, my - 19, mx, my - 11);
-  g.bezierCurveTo(mx + W * 0.25, my - 19, mx + W * 0.6, my - 12, mx + W, my);
-  g.bezierCurveTo(mx + W * 0.5, my + 3, mx - W * 0.5, my + 3, mx - W, my); g.fill();
-  g.fillStyle = css(lip.clone().multiplyScalar(1.05));
-  g.beginPath(); g.moveTo(mx - W * 0.92, my + 1); g.bezierCurveTo(mx - W * 0.6, my + 24, mx + W * 0.6, my + 24, mx + W * 0.92, my + 1);
-  g.bezierCurveTo(mx + W * 0.4, my + 4, mx - W * 0.4, my + 4, mx - W * 0.92, my + 1); g.fill();
-  g.strokeStyle = css(lipD); g.lineWidth = 2.5;
-  g.beginPath(); g.moveTo(mx - W - 3, my - 3); g.bezierCurveTo(mx - W * 0.5, my + 4, mx + W * 0.5, my + 4, mx + W + 3, my - 3); g.stroke();
-  g.fillStyle = css(lipL) + '66'; g.beginPath(); g.ellipse(mx + 4, my + 11, 15, 4.5, 0, 0, Math.PI * 2); g.fill();
-  g.fillStyle = 'rgba(255,255,255,0.22)'; g.beginPath(); g.ellipse(mx + 8, my + 10, 6, 2, 0, 0, Math.PI * 2); g.fill();
-  for (const s of [-1, 1]) { g.fillStyle = shade(0.8, 0.45); g.beginPath(); g.arc(mx + s * (W + 4), my - 4, 3, 0, Math.PI * 2); g.fill(); }   // dimples at the corners
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+  g.beginPath();
+  g.moveTo(mx - W, my + 2);
+  g.bezierCurveTo(mx - W * 0.60, my - 22, mx - W * 0.22, my - 36, mx, my - 20);
+  g.bezierCurveTo(mx + W * 0.22, my - 36, mx + W * 0.60, my - 22, mx + W, my + 2);
+  g.bezierCurveTo(mx + W * 0.48, my + 8, mx - W * 0.48, my + 8, mx - W, my + 2);
+  g.fill();
+
+  // lower lip (fuller, rounder)
+  g.fillStyle = css(lip.clone().multiplyScalar(1.06));
+  g.beginPath();
+  g.moveTo(mx - W * 0.94, my + 4);
+  g.bezierCurveTo(mx - W * 0.60, my + 46, mx + W * 0.60, my + 46, mx + W * 0.94, my + 4);
+  g.bezierCurveTo(mx + W * 0.42, my + 10, mx - W * 0.42, my + 10, mx - W * 0.94, my + 4);
+  g.fill();
+
+  // lip liner (outline)
+  g.strokeStyle = css(lipD); g.lineWidth = 4.5; g.lineJoin = 'round';
+  g.beginPath();
+  g.moveTo(mx - W - 4, my - 2);
+  g.bezierCurveTo(mx - W * 0.60, my - 22, mx - W * 0.22, my - 36, mx, my - 20);
+  g.bezierCurveTo(mx + W * 0.22, my - 36, mx + W * 0.60, my - 22, mx + W + 4, my - 2); g.stroke();
+  g.beginPath();
+  g.moveTo(mx - W - 4, my - 2);
+  g.bezierCurveTo(mx - W * 0.50, my + 8, mx + W * 0.50, my + 8, mx + W + 4, my - 2); g.stroke();
+
+  // central mouth line
+  g.strokeStyle = css(lipD.clone().multiplyScalar(0.75)); g.lineWidth = 3;
+  g.beginPath(); g.moveTo(mx - W + 8, my + 4); g.bezierCurveTo(mx - W * 0.4, my + 12, mx + W * 0.4, my + 12, mx + W - 8, my + 4); g.stroke();
+
+  // lower lip gloss highlight
+  g.fillStyle = css(lipL) + '70'; g.beginPath(); g.ellipse(mx + 6, my + 22, 32, 9, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.ellipse(mx + 10, my + 20, 14, 4, -0.2, 0, Math.PI * 2); g.fill();
+
+  // corner dimples
+  for (const s of [-1, 1]) {
+    g.fillStyle = shade(0.78, 0.50); g.beginPath(); g.arc(mx + s * (W + 6), my - 2, 6, 0, Math.PI * 2); g.fill();
+  }
+
+  // subtle smile lines (nasolabial, very faint)
+  g.strokeStyle = shade(0.82, 0.14); g.lineWidth = 5; g.lineCap = 'round';
+  for (const s of [-1, 1]) {
+    g.beginPath(); g.moveTo(mx + s * W * 0.68, my - 18); g.quadraticCurveTo(mx + s * (W * 0.78 + 10), my + 18, mx + s * (W * 0.70 + 8), my + 36); g.stroke();
+  }
+
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16; return t;
 }
 
 // ---------------------------------------------------------------- machine stand: lower cabinet, coin door, legs (moves with the machine)
