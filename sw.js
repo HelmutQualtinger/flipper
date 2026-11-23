@@ -1,5 +1,5 @@
 // Service worker: precache the whole game for offline play, update in the background.
-const CACHE = 'pinball-v10';
+const CACHE = 'pinball-v11';
 const ASSETS = [
   './', 'index.html', 'pwa.js', 'manifest.webmanifest',
   'main.js?v=10', 'sound.js?v=10', 'layout.js', 'art.js',
@@ -21,6 +21,7 @@ self.addEventListener('activate', e => {
 // stale-while-revalidate for same-origin GET requests
 self.addEventListener('fetch', e => {
   const req = e.request;
+  // only same-origin GETs are cached; visitor counting (GoatCounter) always goes to the network
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   e.respondWith(caches.open(CACHE).then(async cache => {
     const hit = await cache.match(req, { ignoreSearch: req.mode === 'navigate' });
