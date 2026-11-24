@@ -101,7 +101,7 @@
   #helpClose { position:absolute; top:16px; right:18px; width:32px; height:32px; border-radius:50%; border:1px solid #fff3; background:#fff1; color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .15s; }
   #helpClose:hover { background:#fff2; }
   .btn { position:fixed; bottom:34px; width:28vw; max-width:170px; height:64px; border-radius:32px; border:2px solid var(--accent); background:#000b; color:#fff; font-size:22px; display:none; align-items:center; justify-content:center; }
-  #bL { left:14px; } #bR { right:14px; } #bP { left:50%; transform:translateX(-50%); width:30vw; font-size:16px; }
+  #bL { left:14px; } #bR { right:14px; } #bP { left:50%; transform:translateX(-50%); width:30vw; font-size:16px; white-space:nowrap; letter-spacing:1px; }
   @media (pointer:coarse) { .btn { display:flex; } #help { display:none; } }
 </style>
 </head>
@@ -200,11 +200,11 @@ addEventListener('unhandledrejection',function(ev){add('PROMISE: '+(ev.reason&&e
 <div id="fade"></div>
 <div id="power"><i></i></div>
 <div id="help">← / → flippers &nbsp;·&nbsp; hold SPACE = launch &nbsp;·&nbsp; N / TILT = nudge &nbsp;·&nbsp; T theme &nbsp;·&nbsp; M music &nbsp;·&nbsp; B bloom &nbsp;·&nbsp; drag = rotate &nbsp;·&nbsp; wheel = zoom &nbsp;·&nbsp; R reset view</div>
-<div class="btn" id="bL">◀</div><div class="btn" id="bP">START / LAUNCH</div><div class="btn" id="bR">▶</div>
+<div class="btn" id="bL">◀</div><div class="btn" id="bP">START</div><div class="btn" id="bR">▶</div>
 <script type="importmap">
 { "imports": { "three": "./lib/three.module.js", "three/addons/": "./lib/" } }
 </script>
-<script type="module" src="main.js?v=18"></script>
+<script type="module" src="main.js?v=19"></script>
 <script src="pwa.js"></script>
 <!-- visitor counting (GoatCounter) -->
 <script data-goatcounter="https://helmutqualtinger.goatcounter.com/count"

@@ -60,8 +60,20 @@ function toggleFurniture() {
 
 function fitCamera() {
   camera.aspect = innerWidth / innerHeight;
+  camera.clearViewOffset();
   const s = Math.max(1, 0.72 / camera.aspect);
   camBase.set(0, 44 * s, 38 * s);
+  if (camera.aspect < 1) {
+    // portrait (phone): the machine spans the full width and its front edge sits right above the touch buttons
+    const dir = new THREE.Vector3(0, 44, 38).normalize(), p = new THREE.Vector3();
+    const place = d => { camera.position.copy(camLookBase).addScaledVector(dir, d); camera.lookAt(camLookBase); camera.updateProjectionMatrix(); camera.updateMatrixWorld(); };
+    let lo = 10, hi = 600;
+    const wide = () => Math.max(p.set(10.8, 1.5, 20.8).project(camera).x, p.set(10.9, 19, -20.5).project(camera).x);
+    for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; place(m); if (wide() > 0.98) lo = m; else hi = m; }
+    place(hi); camBase.copy(camera.position);
+    const py = (1 - p.set(0, 1.5, 20.8).project(camera).y) / 2 * innerHeight, target = innerHeight - 106;
+    camera.setViewOffset(innerWidth, innerHeight, 0, py - target, innerWidth, innerHeight);
+  }
   camera.position.copy(camBase); camera.lookAt(camLook);
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);

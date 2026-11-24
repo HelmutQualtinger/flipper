@@ -1,8 +1,8 @@
 // Service worker: precache the whole game for offline play, update in the background.
-const CACHE = 'pinball-v22';
+const CACHE = 'pinball-v23';
 const ASSETS = [
   './', 'index.html', 'pwa.js', 'manifest.webmanifest',
-  'main.js?v=18', 'sound.js?v=14', 'layout.js', 'room.js?v=22', 'art.js',
+  'main.js?v=19', 'sound.js?v=14', 'layout.js', 'room.js?v=22', 'art.js',
   'themes/index.js?v=14', 'themes/red.js', 'themes/hawaii.js', 'themes/synthwave.js', 'themes/space.js', 'themes/pirate.js', 'themes/tesla.js', 'themes/halloween.js', 'themes/africa.js', 'themes/newyork.js', 'themes/pinup.js', 'themes/starpatrol.js',
   'lib/three.module.js', 'lib/RoomEnvironment.js',
   'lib/postprocessing/EffectComposer.js', 'lib/postprocessing/Pass.js', 'lib/postprocessing/RenderPass.js',
